@@ -8,7 +8,7 @@ import WebSocketServer from './websocket.js';
 /**
  * start server with port
  */
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Create HTTP server
 const server = createServer(app);
@@ -47,4 +47,4 @@ process.on('SIGINT', () => {
 // Export WebSocket server instance for use in other modules
 export { wsServer };
 
-export default app;
+export default app; // Restart trigger

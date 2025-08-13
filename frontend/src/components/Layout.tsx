@@ -37,11 +37,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
-    { name: 'Assets', href: '/assets', icon: Wallet },
-    { name: 'Deposit', href: '/deposit', icon: ArrowDownToLine },
-    { name: 'Withdraw', href: '/withdraw', icon: ArrowUpFromLine },
-    { name: 'Pools', href: '/pools', icon: Users },
-    { name: 'Trade', href: '/trade', icon: TrendingUp },
+    // { name: 'Assets', href: '/assets', icon: Wallet },
+    // { name: 'Deposit', href: '/deposit', icon: ArrowDownToLine },
+    // { name: 'Withdraw', href: '/withdraw', icon: ArrowUpFromLine },
+    // { name: 'Pools', href: '/pools', icon: Users },
+    // { name: 'Trade', href: '/trade', icon: TrendingUp },
     { name: 'News', href: '/news', icon: Newspaper },
   ];
 
@@ -200,13 +200,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="flex items-center space-x-2">
                 {isConnected ? (
                   <>
-                    <Wifi className="w-4 h-4 text-green-500" />
-                    <span className="text-xs text-green-600">Connected</span>
+                    {/* <Wifi className="w-4 h-4 text-green-500" />
+                    <span className="text-xs text-green-600">Connected</span> */}
                   </>
                 ) : (
                   <>
-                    <WifiOff className="w-4 h-4 text-red-500" />
-                    <span className="text-xs text-red-600">Disconnected</span>
+                    {/* <WifiOff className="w-4 h-4 text-red-500" />
+                    <span className="text-xs text-red-600">Disconnected</span> */}
                   </>
                 )}
               </div>

@@ -2,9 +2,9 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
-import { User } from './models/index';
-import { cryptoService } from './services/cryptoService';
-import { newsService } from './services/newsService';
+import User from './models/User.js';
+import { cryptoService } from './services/cryptoService.js';
+import { newsService } from './services/newsService.js';
 
 interface AuthenticatedSocket extends Socket {
   userId?: string;
@@ -22,9 +22,9 @@ class WebSocketServer {
       cors: {
         origin: process.env.CLIENT_URL || 'http://localhost:5173',
         methods: ['GET', 'POST'],
-        credentials: true
+        credentials: true,
       },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
     });
 
     this.setupMiddleware();
@@ -36,8 +36,10 @@ class WebSocketServer {
     // Authentication middleware
     this.io.use(async (socket: any, next) => {
       try {
-        const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
-        
+        const token =
+          socket.handshake.auth.token ||
+          socket.handshake.headers.authorization?.replace('Bearer ', '');
+
         if (!token) {
           // Allow anonymous connections for public market data
           socket.isAuthenticated = false;
@@ -45,8 +47,10 @@ class WebSocketServer {
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
-        const user = await User.findById(decoded.userId).select('_id email role isActive');
-        
+        const user = await User.findById(decoded.userId).select(
+          '_id email role isActive'
+        );
+
         if (!user || !user.isActive) {
           return next(new Error('Authentication failed'));
         }
@@ -54,7 +58,7 @@ class WebSocketServer {
         socket.userId = user._id.toString();
         socket.userRole = user.role;
         socket.isAuthenticated = true;
-        
+
         next();
       } catch (error) {
         console.error('WebSocket authentication error:', error);
@@ -70,7 +74,7 @@ class WebSocketServer {
       // Track authenticated users
       if (socket.isAuthenticated && socket.userId) {
         this.connectedUsers.set(socket.id, socket.userId);
-        
+
         if (!this.userSockets.has(socket.userId)) {
           this.userSockets.set(socket.userId, new Set());
         }
@@ -78,30 +82,40 @@ class WebSocketServer {
 
         // Join user-specific room
         socket.join(`user:${socket.userId}`);
-        
+
         // Send welcome message with user info
         socket.emit('authenticated', {
           userId: socket.userId,
           role: socket.userRole,
-          timestamp: new Date()
+          timestamp: new Date(),
         });
       }
 
       // Subscribe to market data
       socket.on('subscribe:market', (data: { pairs?: string[] }) => {
-        const pairs = data.pairs || ['BTC/USD', 'ETH/USD', 'BTC/ETH', 'TRC20/USD'];
-        pairs.forEach(pair => {
+        const pairs = data.pairs || [
+          'BTC/USD',
+          'ETH/USD',
+          'BTC/ETH',
+          'TRC20/USD',
+        ];
+        pairs.forEach((pair) => {
           socket.join(`market:${pair}`);
         });
-        
+
         // Send current market data immediately
         this.sendCurrentMarketData(socket, pairs);
       });
 
       // Unsubscribe from market data
       socket.on('unsubscribe:market', (data: { pairs?: string[] }) => {
-        const pairs = data.pairs || ['BTC/USD', 'ETH/USD', 'BTC/ETH', 'TRC20/USD'];
-        pairs.forEach(pair => {
+        const pairs = data.pairs || [
+          'BTC/USD',
+          'ETH/USD',
+          'BTC/ETH',
+          'TRC20/USD',
+        ];
+        pairs.forEach((pair) => {
           socket.leave(`market:${pair}`);
         });
       });
@@ -112,7 +126,9 @@ class WebSocketServer {
           socket.join(`portfolio:${socket.userId}`);
           this.sendPortfolioUpdate(socket.userId);
         } else {
-          socket.emit('error', { message: 'Authentication required for portfolio updates' });
+          socket.emit('error', {
+            message: 'Authentication required for portfolio updates',
+          });
         }
       });
 
@@ -121,7 +137,9 @@ class WebSocketServer {
         if (socket.isAuthenticated && socket.userId) {
           socket.join(`trades:${socket.userId}`);
         } else {
-          socket.emit('error', { message: 'Authentication required for trade updates' });
+          socket.emit('error', {
+            message: 'Authentication required for trade updates',
+          });
         }
       });
 
@@ -130,7 +148,9 @@ class WebSocketServer {
         if (socket.isAuthenticated && socket.userId) {
           socket.join(`notifications:${socket.userId}`);
         } else {
-          socket.emit('error', { message: 'Authentication required for notifications' });
+          socket.emit('error', {
+            message: 'Authentication required for notifications',
+          });
         }
       });
 
@@ -152,10 +172,10 @@ class WebSocketServer {
       // Handle disconnection
       socket.on('disconnect', (reason) => {
         console.log(`Client disconnected: ${socket.id}, reason: ${reason}`);
-        
+
         if (socket.userId) {
           this.connectedUsers.delete(socket.id);
-          
+
           const userSocketSet = this.userSockets.get(socket.userId);
           if (userSocketSet) {
             userSocketSet.delete(socket.id);
@@ -178,7 +198,7 @@ class WebSocketServer {
       const marketData = await this.fetchMarketData();
       socket.emit('market:data', {
         pairs: marketData,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
       console.error('Error sending current market data:', error);
@@ -193,10 +213,10 @@ class WebSocketServer {
 
       const marketData = await this.fetchMarketData();
       const portfolio = this.calculatePortfolioValue(user.balances, marketData);
-      
+
       this.io.to(`portfolio:${userId}`).emit('portfolio:update', {
         portfolio,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
       console.error('Error sending portfolio update:', error);
@@ -208,13 +228,13 @@ class WebSocketServer {
     this.marketDataInterval = setInterval(async () => {
       try {
         const marketData = await this.fetchMarketData();
-        
+
         // Broadcast to all market data subscribers
-        Object.keys(marketData).forEach(pair => {
+        Object.keys(marketData).forEach((pair) => {
           this.io.to(`market:${pair}`).emit('market:update', {
             pair,
             data: marketData[pair],
-            timestamp: new Date()
+            timestamp: new Date(),
           });
         });
 
@@ -228,39 +248,39 @@ class WebSocketServer {
     }, 30000); // 30 seconds
   }
 
-  private async fetchMarketData() {
+  private async fetchMarketData(): Promise<any> {
     try {
-      const prices = await cryptoService.getCryptoPrices(['bitcoin', 'ethereum', 'tron']);
-      
-      const btcPrice = prices.find(p => p.symbol === 'BTC');
-      const ethPrice = prices.find(p => p.symbol === 'ETH');
-      const trxPrice = prices.find(p => p.symbol === 'TRX');
-      
+      const prices = await cryptoService.getCryptoPrices();
+
+      const btcPrice = prices.find((p) => p.symbol === 'BTC');
+      const ethPrice = prices.find((p) => p.symbol === 'ETH');
+      const trxPrice = prices.find((p) => p.symbol === 'TRX');
+
       return {
         'BTC/USD': {
           price: btcPrice?.price || 50000,
           change24h: btcPrice?.change24h || 0,
           volume24h: btcPrice?.volume || 0,
-          marketCap: btcPrice?.marketCap || 0
+          marketCap: btcPrice?.marketCap || 0,
         },
         'ETH/USD': {
           price: ethPrice?.price || 3000,
           change24h: ethPrice?.change24h || 0,
           volume24h: ethPrice?.volume || 0,
-          marketCap: ethPrice?.marketCap || 0
+          marketCap: ethPrice?.marketCap || 0,
         },
         'BTC/ETH': {
           price: (btcPrice?.price || 50000) / (ethPrice?.price || 3000),
           change24h: (btcPrice?.change24h || 0) - (ethPrice?.change24h || 0),
           volume24h: 0,
-          marketCap: 0
+          marketCap: 0,
         },
         'TRC20/USD': {
           price: trxPrice?.price || 0.12,
           change24h: trxPrice?.change24h || 0,
           volume24h: trxPrice?.volume || 0,
-          marketCap: trxPrice?.marketCap || 0
-        }
+          marketCap: trxPrice?.marketCap || 0,
+        },
       };
     } catch (error) {
       console.error('Error fetching market data:', error);
@@ -269,13 +289,13 @@ class WebSocketServer {
         'BTC/USD': { price: 50000, change24h: 0, volume24h: 0, marketCap: 0 },
         'ETH/USD': { price: 3000, change24h: 0, volume24h: 0, marketCap: 0 },
         'BTC/ETH': { price: 16.67, change24h: 0, volume24h: 0, marketCap: 0 },
-        'TRC20/USD': { price: 0.12, change24h: 0, volume24h: 0, marketCap: 0 }
+        'TRC20/USD': { price: 0.12, change24h: 0, volume24h: 0, marketCap: 0 },
       };
     }
   }
 
-  private calculatePortfolioValue(balances: any, marketData: any) {
-    const totalValue = 
+  private calculatePortfolioValue(balances: any, marketData: any): any {
+    const totalValue =
       balances.BTC * marketData['BTC/USD'].price +
       balances.ETH * marketData['ETH/USD'].price +
       balances.TRC20 * marketData['TRC20/USD'].price +
@@ -286,27 +306,37 @@ class WebSocketServer {
         balance: balances.BTC,
         usdValue: balances.BTC * marketData['BTC/USD'].price,
         price: marketData['BTC/USD'].price,
-        percentage: totalValue > 0 ? (balances.BTC * marketData['BTC/USD'].price / totalValue) * 100 : 0
+        percentage:
+          totalValue > 0
+            ? ((balances.BTC * marketData['BTC/USD'].price) / totalValue) * 100
+            : 0,
       },
       ETH: {
         balance: balances.ETH,
         usdValue: balances.ETH * marketData['ETH/USD'].price,
         price: marketData['ETH/USD'].price,
-        percentage: totalValue > 0 ? (balances.ETH * marketData['ETH/USD'].price / totalValue) * 100 : 0
+        percentage:
+          totalValue > 0
+            ? ((balances.ETH * marketData['ETH/USD'].price) / totalValue) * 100
+            : 0,
       },
       TRC20: {
         balance: balances.TRC20,
         usdValue: balances.TRC20 * marketData['TRC20/USD'].price,
         price: marketData['TRC20/USD'].price,
-        percentage: totalValue > 0 ? (balances.TRC20 * marketData['TRC20/USD'].price / totalValue) * 100 : 0
+        percentage:
+          totalValue > 0
+            ? ((balances.TRC20 * marketData['TRC20/USD'].price) / totalValue) *
+              100
+            : 0,
       },
       USD: {
         balance: balances.USD,
         usdValue: balances.USD,
         price: 1,
-        percentage: totalValue > 0 ? (balances.USD / totalValue) * 100 : 0
+        percentage: totalValue > 0 ? (balances.USD / totalValue) * 100 : 0,
       },
-      total: totalValue
+      total: totalValue,
     };
   }
 
@@ -314,16 +344,16 @@ class WebSocketServer {
   public sendNotification(userId: string, notification: any) {
     this.io.to(`notifications:${userId}`).emit('notification', {
       ...notification,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
   public async sendNewsUpdate() {
     try {
-      const news = await newsService.getTopHeadlines(5);
+      const news = await newsService.getCryptoNews(5);
       this.io.emit('news:update', {
         news,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
     } catch (error) {
       console.error('Error sending news update:', error);
@@ -333,22 +363,25 @@ class WebSocketServer {
   public sendTradeUpdate(userId: string, tradeData: any) {
     this.io.to(`trades:${userId}`).emit('trade:update', {
       ...tradeData,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
   public sendAdminAlert(alertData: any) {
     this.io.to('admin:updates').emit('admin:alert', {
       ...alertData,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
-  public broadcastSystemMessage(message: string, type: 'info' | 'warning' | 'error' = 'info') {
+  public broadcastSystemMessage(
+    message: string,
+    type: 'info' | 'warning' | 'error' = 'info'
+  ) {
     this.io.emit('system:message', {
       message,
       type,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 

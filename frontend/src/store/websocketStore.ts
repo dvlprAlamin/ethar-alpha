@@ -26,14 +26,14 @@ interface Notification {
 }
 
 interface NewsArticle {
+  id: string;
   title: string;
   description: string;
   url: string;
-  urlToImage: string;
+  imageUrl: string;
   publishedAt: string;
-  source: {
-    name: string;
-  };
+  source: string;
+  author?: string;
 }
 
 interface WebSocketState {
@@ -44,7 +44,7 @@ interface WebSocketState {
   notifications: Notification[];
   news: NewsArticle[];
   connectionError: string | null;
-  
+
   // Actions
   connect: () => void;
   disconnect: () => void;
@@ -54,10 +54,12 @@ interface WebSocketState {
   subscribeToNews: () => void;
   markNotificationAsRead: (id: string) => void;
   clearNotifications: () => void;
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void;
+  addNotification: (
+    notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
+  ) => void;
 }
 
-const WS_URL = 'http://localhost:3001';
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
 
 export const useWebSocketStore = create<WebSocketState>((set, get) => ({
   socket: null,
@@ -70,47 +72,47 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
   connect: () => {
     const { socket: existingSocket } = get();
-    
+
     // Don't create multiple connections
     if (existingSocket?.connected) {
       return;
     }
 
     const { token } = useAuthStore.getState();
-    
+
     const socket = io(WS_URL, {
       auth: {
-        token
+        token,
       },
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
     });
 
     // Connection events
     socket.on('connect', () => {
       console.log('WebSocket connected');
-      set({ 
-        isConnected: true, 
+      set({
+        isConnected: true,
         connectionError: null,
-        socket 
+        socket,
       });
     });
 
     socket.on('disconnect', (reason) => {
       console.log('WebSocket disconnected:', reason);
-      set({ 
+      set({
         isConnected: false,
-        socket: null
+        socket: null,
       });
     });
 
     socket.on('connect_error', (error) => {
       console.error('WebSocket connection error:', error);
-      set({ 
+      set({
         connectionError: error.message,
-        isConnected: false
+        isConnected: false,
       });
     });
 
@@ -129,8 +131,8 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
       set({
         marketData: {
           ...marketData,
-          [data.pair]: data.data
-        }
+          [data.pair]: data.data,
+        },
       });
     });
 
@@ -147,12 +149,12 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
         title: data.title,
         message: data.message,
         timestamp: new Date(data.timestamp),
-        read: false
+        read: false,
       };
-      
+
       const { notifications } = get();
-      set({ 
-        notifications: [notification, ...notifications].slice(0, 50) // Keep only last 50
+      set({
+        notifications: [notification, ...notifications].slice(0, 50), // Keep only last 50
       });
     });
 
@@ -161,7 +163,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
       get().addNotification({
         type: 'success',
         title: 'Trade Update',
-        message: `Your ${data.type} order for ${data.amount} ${data.baseAsset} has been ${data.status}`
+        message: `Your ${data.type} order for ${data.amount} ${data.baseAsset} has been ${data.status}`,
       });
     });
 
@@ -170,7 +172,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
       get().addNotification({
         type: data.type,
         title: 'System Message',
-        message: data.message
+        message: data.message,
       });
     });
 
@@ -179,7 +181,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
       get().addNotification({
         type: 'warning',
         title: 'Admin Alert',
-        message: data.message
+        message: data.message,
       });
     });
 
@@ -194,7 +196,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
       get().addNotification({
         type: 'error',
         title: 'Connection Error',
-        message: error.message || 'An error occurred with the connection'
+        message: error.message || 'An error occurred with the connection',
       });
     });
 
@@ -208,21 +210,21 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
   disconnect: () => {
     const { socket } = get();
-    
+
     if (socket) {
       socket.disconnect();
-      set({ 
-        socket: null, 
+      set({
+        socket: null,
         isConnected: false,
         marketData: {},
-        portfolio: null
+        portfolio: null,
       });
     }
   },
 
   subscribeToMarket: (pairs: string[]) => {
     const { socket } = get();
-    
+
     if (socket?.connected) {
       socket.emit('subscribe:market', { pairs });
     }
@@ -230,7 +232,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
   subscribeToPortfolio: () => {
     const { socket } = get();
-    
+
     if (socket?.connected) {
       socket.emit('subscribe:portfolio');
     }
@@ -238,7 +240,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
   subscribeToNotifications: () => {
     const { socket } = get();
-    
+
     if (socket?.connected) {
       socket.emit('subscribe:notifications');
     }
@@ -246,7 +248,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
   subscribeToNews: () => {
     const { socket } = get();
-    
+
     if (socket?.connected) {
       socket.emit('subscribe:news');
     }
@@ -254,13 +256,11 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 
   markNotificationAsRead: (id: string) => {
     const { notifications } = get();
-    
+
     set({
-      notifications: notifications.map(notification =>
-        notification.id === id
-          ? { ...notification, read: true }
-          : notification
-      )
+      notifications: notifications.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification
+      ),
     });
   },
 
@@ -268,19 +268,21 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
     set({ notifications: [] });
   },
 
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+  addNotification: (
+    notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
+  ) => {
     const newNotification: Notification = {
       ...notification,
       id: Date.now().toString(),
       timestamp: new Date(),
-      read: false
+      read: false,
     };
-    
+
     const { notifications } = get();
-    set({ 
-      notifications: [newNotification, ...notifications].slice(0, 50)
+    set({
+      notifications: [newNotification, ...notifications].slice(0, 50),
     });
-  }
+  },
 }));
 
 // Auto-connect functionality is handled in App.tsx
@@ -288,7 +290,7 @@ export const useWebSocketStore = create<WebSocketState>((set, get) => ({
 // Ping interval to keep connection alive
 setInterval(() => {
   const { socket } = useWebSocketStore.getState();
-  
+
   if (socket?.connected) {
     socket.emit('ping');
   }

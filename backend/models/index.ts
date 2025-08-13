@@ -58,7 +58,8 @@ export const connectDB = async (mongoUri: string) => {
 // Database initialization with default data
 export const initializeDatabase = async () => {
   try {
-    const { AdminConfig, User } = await import('./index');
+    const AdminConfig = (await import('./AdminConfig')).default;
+    const User = (await import('./User')).default;
     
     // Initialize admin config if it doesn't exist
     await AdminConfig.getConfig();

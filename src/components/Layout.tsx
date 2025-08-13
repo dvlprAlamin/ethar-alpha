@@ -11,14 +11,14 @@ import {
   Users,
   BarChart3,
   Settings,
-  Bell,
+  // Bell,
   User,
   LogOut,
   Menu,
   X,
   Wifi,
   WifiOff,
-  Newspaper
+  Newspaper,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -28,11 +28,12 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const { isConnected, notifications, markNotificationAsRead } = useWebSocketStore();
+  const { isConnected, notifications, markNotificationAsRead } =
+    useWebSocketStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const unreadNotifications = notifications.filter(n => !n.read);
+  // const unreadNotifications = notifications.filter((n) => !n.read);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
@@ -49,9 +50,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
-  const handleNotificationClick = (notificationId: string) => {
-    markNotificationAsRead(notificationId);
-  };
+  // const handleNotificationClick = (notificationId: string) => {
+  //   markNotificationAsRead(notificationId);
+  // };
 
   const handleLogout = () => {
     logout();
@@ -84,7 +85,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
-            <span className="ml-2 text-xl font-bold text-gray-900">Ethar Alpha</span>
+            <span className="ml-2 text-xl font-bold text-gray-900">
+              Ethar Alpha
+            </span>
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -110,7 +113,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 >
                   <item.icon
                     className={`mr-3 h-5 w-5 ${
-                      isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+                      isActive
+                        ? 'text-blue-500'
+                        : 'text-gray-400 group-hover:text-gray-500'
                     }`}
                   />
                   {item.name}
@@ -119,7 +124,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             })}
           </div>
 
-          {user?.role === 'admin' && (
+          {/* {user?.role === 'admin' && (
             <div className="mt-8">
               <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Administration
@@ -139,7 +144,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     >
                       <item.icon
                         className={`mr-3 h-5 w-5 ${
-                          isActive ? 'text-red-500' : 'text-gray-400 group-hover:text-gray-500'
+                          isActive
+                            ? 'text-red-500'
+                            : 'text-gray-400 group-hover:text-gray-500'
                         }`}
                       />
                       {item.name}
@@ -148,7 +155,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 })}
               </div>
             </div>
-          )}
+          )} */}
         </nav>
 
         {/* User info and logout */}
@@ -163,9 +170,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <p className="text-sm font-medium text-gray-900 truncate">
                 {user?.name}
               </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.email}
-              </p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
             <button
               onClick={handleLogout}
@@ -207,7 +212,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
 
               {/* Notifications */}
-              <div className="relative">
+              {/* <div className="relative">
                 <button
                   onClick={() => setNotificationsOpen(!notificationsOpen)}
                   className="p-2 rounded-md text-gray-400 hover:text-gray-500 relative"
@@ -220,7 +225,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   )}
                 </button>
 
-                {/* Notifications dropdown */}
+               
                 {notificationsOpen && (
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                     <div className="p-4">
@@ -260,7 +265,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </div>
                   </div>
                 )}
-              </div>
+              </div> */}
             </div>
           </div>
         </div>

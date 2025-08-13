@@ -1,18 +1,23 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useWebSocketStore } from './store/websocketStore';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import Assets from './pages/Assets';
-import Deposit from './pages/Deposit';
-import Withdraw from './pages/Withdraw';
-import Pools from './pages/Pools';
-import Trade from './pages/Trade';
+// import Assets from './pages/Assets';
+// import Deposit from './pages/Deposit';
+// import Withdraw from './pages/Withdraw';
+// import Pools from './pages/Pools';
+// import Trade from './pages/Trade';
 import News from './pages/News';
-import Admin from './pages/Admin';
+// import Admin from './pages/Admin';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
 
@@ -22,7 +27,10 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin = false }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  requireAdmin = false,
+}) => {
   const { user, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated || !user) {
@@ -60,7 +68,9 @@ const LoadingScreen: React.FC = () => {
           <Loader2 className="h-8 w-8 text-white animate-spin" />
         </div>
         <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading...</h2>
-        <p className="text-gray-600">Please wait while we initialize the application</p>
+        <p className="text-gray-600">
+          Please wait while we initialize the application
+        </p>
       </div>
     </div>
   );
@@ -102,36 +112,36 @@ const App: React.FC = () => {
       <Router>
         <div className="App">
           <Routes>
-          {/* Public Routes */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            }
-          />
+            {/* Public Routes */}
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/register"
+              element={
+                <PublicRoute>
+                  <Register />
+                </PublicRoute>
+              }
+            />
 
-          {/* Protected Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <Dashboard />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
+            {/* Protected Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Dashboard />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            {/* <Route
             path="/assets"
             element={
               <ProtectedRoute>
@@ -181,60 +191,65 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/news"
-            element={
-              <ProtectedRoute>
-                <Layout>
-                  <News />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requireAdmin>
-                <Layout>
-                  <Admin />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
+           */}
+            <Route
+              path="/news"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <News />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            {/* <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <Layout>
+                    <Admin />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            /> */}
 
-          {/* Default Redirects */}
-          <Route
-            path="/"
-            element={
-              isAuthenticated ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
+            {/* Default Redirects */}
+            <Route
+              path="/"
+              element={
+                isAuthenticated ? (
+                  <Navigate to="/dashboard" replace />
+                ) : (
+                  <Navigate to="/login" replace />
+                )
+              }
+            />
 
-          {/* 404 Route */}
-          <Route
-            path="*"
-            element={
-              <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
-                  <h2 className="text-2xl font-semibold text-gray-700 mb-4">Page Not Found</h2>
-                  <p className="text-gray-600 mb-8">
-                    The page you're looking for doesn't exist.
-                  </p>
-                  <button
-                    onClick={() => window.history.back()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-                  >
-                    Go Back
-                  </button>
+            {/* 404 Route */}
+            <Route
+              path="*"
+              element={
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                  <div className="text-center">
+                    <h1 className="text-6xl font-bold text-gray-900 mb-4">
+                      404
+                    </h1>
+                    <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+                      Page Not Found
+                    </h2>
+                    <p className="text-gray-600 mb-8">
+                      The page you're looking for doesn't exist.
+                    </p>
+                    <button
+                      onClick={() => window.history.back()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                    >
+                      Go Back
+                    </button>
+                  </div>
                 </div>
-              </div>
-            }
-          />
+              }
+            />
           </Routes>
         </div>
       </Router>

@@ -9,7 +9,7 @@ import {
   Shield,
   AlertCircle,
   Loader2,
-  ArrowRight
+  ArrowRight,
 } from 'lucide-react';
 import { useFormSubmission } from '../hooks/useAsyncOperation';
 import ErrorDisplay from '../components/ErrorDisplay';
@@ -21,64 +21,72 @@ const Login: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    twoFactorCode: ''
+    twoFactorCode: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  
-  const { submit: submitLogin, loading: isSubmitting, error: submitError } = useFormSubmission({
+
+  const {
+    submit: submitLogin,
+    loading: isSubmitting,
+    error: submitError,
+  } = useFormSubmission({
     onSuccess: () => {
       setValidationErrors([]);
-    }
+    },
   });
 
   const validateForm = () => {
     const errors: string[] = [];
-    
+
     if (!validateEmail(formData.email)) {
       errors.push('Please enter a valid email address');
     }
-    
+
     if (!validatePassword(formData.password)) {
       errors.push('Password must be at least 8 characters long');
     }
-    
-    if (requiresTwoFactor && (!formData.twoFactorCode || formData.twoFactorCode.length !== 6)) {
+
+    if (
+      requiresTwoFactor &&
+      (!formData.twoFactorCode || formData.twoFactorCode.length !== 6)
+    ) {
       errors.push('Please enter a valid 6-digit verification code');
     }
-    
+
     setValidationErrors(errors);
     return errors.length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     try {
-      await submitLogin(
-        formData,
-        async (data) => {
-          const result = await login(data.email, data.password, data.twoFactorCode);
-          
-          if (result.requiresTwoFactor && !data.twoFactorCode) {
-            setRequiresTwoFactor(true);
-            return;
-          }
-          
-          if (result.success) {
-            // Login successful
-            navigate('/dashboard');
-          }
-          
-          return result;
+      await submitLogin(formData, async (data) => {
+        const result = await login(
+          data.email,
+          data.password,
+          data.twoFactorCode
+        );
+
+        if (result.requiresTwoFactor && !data.twoFactorCode) {
+          setRequiresTwoFactor(true);
+          return;
         }
-      );
+
+        if (result.success) {
+          // Login successful
+          navigate('/dashboard');
+        }
+
+        return result;
+      });
     } catch (err) {
       // Error is handled by the hook
     }
@@ -86,9 +94,9 @@ const Login: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -118,15 +126,15 @@ const Login: React.FC = () => {
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Error Message */}
-            <ErrorDisplay 
-              error={error || submitError} 
+            <ErrorDisplay
+              error={error || submitError}
               className="mb-4"
               onRetry={() => {
                 useAuthStore.getState().clearError();
                 setValidationErrors([]);
               }}
             />
-            
+
             {validationErrors.length > 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
                 <div className="flex">
@@ -147,7 +155,10 @@ const Login: React.FC = () => {
 
             {/* Email Field */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email address
               </label>
               <div className="relative">
@@ -170,7 +181,10 @@ const Login: React.FC = () => {
 
             {/* Password Field */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
@@ -205,7 +219,10 @@ const Login: React.FC = () => {
             {/* Two-Factor Authentication */}
             {requiresTwoFactor && (
               <div>
-                <label htmlFor="twoFactorCode" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="twoFactorCode"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Two-Factor Authentication Code
                 </label>
                 <div className="relative">
@@ -241,7 +258,10 @@ const Login: React.FC = () => {
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                <label
+                  htmlFor="remember-me"
+                  className="ml-2 block text-sm text-gray-900"
+                >
                   Remember me
                 </label>
               </div>
@@ -263,7 +283,7 @@ const Login: React.FC = () => {
                 disabled={loading || isSubmitting}
                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {(loading || isSubmitting) ? (
+                {loading || isSubmitting ? (
                   <div className="flex items-center">
                     <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
                     {requiresTwoFactor ? 'Verifying...' : 'Signing in...'}
@@ -280,26 +300,15 @@ const Login: React.FC = () => {
 
           {/* Demo Credentials */}
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Demo Credentials</h4>
+            <h4 className="text-sm font-medium text-gray-900 mb-2">
+              Demo Credentials
+            </h4>
             <div className="text-xs text-gray-600 space-y-1">
-              <p><strong>User:</strong> user@demo.com / password123</p>
-              <p><strong>Admin:</strong> admin@demo.com / admin123</p>
+              <p>
+                <strong>Admin:</strong> admin@crypto-platform.com / admin123
+              </p>
             </div>
           </div>
-        </div>
-
-        {/* Security Notice */}
-        <div className="text-center">
-          <p className="text-xs text-gray-500">
-            By signing in, you agree to our{' '}
-            <Link to="/terms" className="text-blue-600 hover:text-blue-500">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link to="/privacy" className="text-blue-600 hover:text-blue-500">
-              Privacy Policy
-            </Link>
-          </p>
         </div>
       </div>
     </div>

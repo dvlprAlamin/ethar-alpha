@@ -13,14 +13,25 @@ PORT = "$PORT"
 
 [environments.production.deploy]
 healthcheckPath = "/api/health"
-healthcheckTimeout = 100
+healthcheckTimeout = 30
+healthcheckInterval = 30
 
 # Railway will automatically set PORT environment variable
-# Make sure to set these environment variables in Railway dashboard:
-# - MONGODB_URI
-# - JWT_SECRET
-# - JWT_EXPIRES_IN
-# - CLIENT_URL
-# - ADMIN_EMAIL
-# - ADMIN_PASSWORD
-# - WS_PORT
+# The server includes fallback port logic and graceful error handling
+# 
+# Required environment variables to set in Railway dashboard:
+# - MONGODB_URI (MongoDB Atlas connection string)
+# - JWT_SECRET (secure random string for JWT signing)
+# 
+# Optional environment variables with defaults:
+# - JWT_EXPIRES_IN (default: "24h")
+# - CLIENT_URL (default: "http://localhost:5173")
+# - ADMIN_EMAIL (default: "admin@ethar.com")
+# - ADMIN_PASSWORD (default: "admin123" - CHANGE IN PRODUCTION!)
+# - WS_PORT (default: 3002, will use PORT+1 if not set)
+# 
+# The enhanced health check endpoint provides:
+# - Database connection status
+# - Memory usage information
+# - Server uptime
+# - Environment configuration status

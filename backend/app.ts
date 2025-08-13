@@ -9,44 +9,47 @@ import express, {
 } from 'express';
 import cors from 'cors';
 import path from 'path';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { connectDB, initializeDatabase } from './models/index.js';
-import authRoutes from './routes/auth.js';
-import assetsRoutes from './routes/assets.js';
-import depositRoutes from './routes/deposit.js';
-import withdrawRoutes from './routes/withdraw.js';
-import poolsRoutes from './routes/pools.js';
-import tradeRoutes from './routes/trade.js';
-import adminRoutes from './routes/admin.js';
-import marketRoutes from './routes/market.js';
+import { connectDB, initializeDatabase, getDatabaseStatus } from './models/index';
+import { config, getEnvironmentSummary } from './config/environment';
+import logger from './utils/logger';
+import authRoutes from './routes/auth';
+import assetsRoutes from './routes/assets';
+import depositRoutes from './routes/deposit';
+import withdrawRoutes from './routes/withdraw';
+import poolsRoutes from './routes/pools';
+import tradeRoutes from './routes/trade';
+import adminRoutes from './routes/admin';
+import marketRoutes from './routes/market';
 
-// for esm mode
-const __filename = fileURLToPath(import.meta.url);
-
-// load env
-dotenv.config();
-
-// Initialize database connection
-const MONGODB_URI =
-  process.env.MONGODB_URI ||
-  'mongodb://localhost:27017/crypto-trading-platform';
-connectDB(MONGODB_URI)
-  .then(() => {
-    console.log('Database connected successfully');
-    initializeDatabase().catch(console.error);
+// Initialize database connection with retry logic
+logger.dbInfo('Initializing database connection', { uri: config.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') });
+connectDB(config.MONGODB_URI)
+  .then((connection) => {
+    if (connection) {
+      console.log('✅ Database connected successfully');
+      initializeDatabase().catch((error) => {
+        console.error('❌ Database initialization failed:', error);
+      });
+    } else {
+      console.warn('⚠️ Server starting without database connection');
+    }
   })
-  .catch(console.error);
+  .catch((error) => {
+    console.error('❌ Database connection failed:', error);
+    console.log('🔄 Server will continue and attempt to reconnect...');
+  });
 
 const app: express.Application = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: config.CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 };
+
+logger.info('CORS configured', { origin: config.CLIENT_URL });
 
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
@@ -65,25 +68,97 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/market', marketRoutes);
 
 /**
- * health
+ * Enhanced health check endpoint for Railway deployment monitoring
  */
 app.use(
   '/api/health',
   (req: Request, res: Response, next: NextFunction): void => {
-    res.status(200).json({
-      success: true,
-      message: 'ok',
-    });
+    try {
+      const dbStatus = getDatabaseStatus();
+      const memoryUsage = process.memoryUsage();
+      const uptime = process.uptime();
+      
+      // Determine overall health status
+      const isHealthy = dbStatus.isConnected && dbStatus.readyState === 1;
+      const statusCode = isHealthy ? 200 : 503;
+      
+      const healthData = {
+        success: true,
+        status: isHealthy ? 'healthy' : 'degraded',
+        timestamp: new Date().toISOString(),
+        uptime: {
+          seconds: Math.floor(uptime),
+          human: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`
+        },
+        database: {
+          connected: dbStatus.isConnected,
+          readyState: dbStatus.readyState,
+          readyStateText: getReadyStateText(dbStatus.readyState),
+          host: dbStatus.host || 'unknown',
+          name: dbStatus.name || 'unknown',
+          connectionAttempts: dbStatus.connectionAttempts
+        },
+        memory: {
+          rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
+          heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
+          heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
+          external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`
+        },
+        environment: {
+           nodeVersion: process.version,
+           platform: process.platform,
+           arch: process.arch,
+           nodeEnv: config.NODE_ENV,
+           ...getEnvironmentSummary()
+         },
+        message: isHealthy ? 'All systems operational' : 'Service degraded - database connection issues'
+      };
+      
+      res.status(statusCode).json(healthData);
+    } catch (error) {
+      console.error('Health check error:', error);
+      res.status(503).json({
+        success: false,
+        status: 'error',
+        message: 'Health check failed',
+        timestamp: new Date().toISOString(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   }
 );
+
+// Helper function to convert mongoose ready state to human readable text
+function getReadyStateText(readyState: number): string {
+  switch (readyState) {
+    case 0: return 'disconnected';
+    case 1: return 'connected';
+    case 2: return 'connecting';
+    case 3: return 'disconnecting';
+    default: return 'unknown';
+  }
+}
 
 /**
  * error handler middleware
  */
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
+  const requestId = req.headers['x-request-id'] as string || 'unknown';
+  const userId = (req as any).user?.id;
+  
+  logger.error('Request error', error, {
+    requestId,
+    userId,
+    method: req.method,
+    url: req.url,
+    userAgent: req.headers['user-agent'],
+    ip: req.ip
+  });
+  
   res.status(500).json({
     success: false,
     error: 'Server internal error',
+    requestId
   });
 });
 
@@ -91,9 +166,20 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
  * 404 handler
  */
 app.use((req: Request, res: Response) => {
+  const requestId = req.headers['x-request-id'] as string || 'unknown';
+  
+  logger.warn('Route not found', {
+    requestId,
+    method: req.method,
+    url: req.url,
+    userAgent: req.headers['user-agent'],
+    ip: req.ip
+  });
+  
   res.status(404).json({
     success: false,
     error: 'API not found',
+    requestId
   });
 });
 

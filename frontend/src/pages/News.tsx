@@ -113,8 +113,7 @@ const News: React.FC = () => {
       const limit = 20;
       const offset = (page - 1) * limit;
 
-      const API_BASE_URL =
-        import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const API_BASE_URL = import.meta.env.VITE_API_URL;
       const apiUrl = `${API_BASE_URL}/market/news?limit=${limit}&offset=${offset}`;
 
       console.log('📡 Making API call to:', apiUrl);

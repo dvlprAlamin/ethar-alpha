@@ -199,7 +199,7 @@ const adminConfigSchema = new mongoose.Schema<IAdminConfig>({
 });
 
 // Single document collection - only one config document should exist
-adminConfigSchema.index({ _id: 1 }, { unique: true });
+// Note: _id index is automatically created by MongoDB
 
 // Update the updatedAt field before saving
 adminConfigSchema.pre('save', function(next) {

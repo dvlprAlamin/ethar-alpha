@@ -59,7 +59,7 @@ interface WebSocketState {
   ) => void;
 }
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:3000';
+const WS_URL = import.meta.env.VITE_WS_URL ;
 
 export const useWebSocketStore = create<WebSocketState>((set, get) => ({
   socket: null,

@@ -70,8 +70,7 @@ const userSchema = new mongoose.Schema<IUser>({
   timestamps: true
 });
 
-// Indexes
-userSchema.index({ email: 1 });
+// Indexes (email index is automatically created by unique: true)
 userSchema.index({ createdAt: -1 });
 userSchema.index({ role: 1 });
 

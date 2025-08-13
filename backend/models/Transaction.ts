@@ -49,7 +49,7 @@ const transactionSchema = new mongoose.Schema<ITransaction>({
   },
   txHash: {
     type: String,
-    sparse: true
+    index: { sparse: true }
   },
   fromAddress: {
     type: String,
@@ -80,7 +80,7 @@ transactionSchema.index({ userId: 1, createdAt: -1 });
 transactionSchema.index({ status: 1 });
 transactionSchema.index({ type: 1 });
 transactionSchema.index({ currency: 1 });
-transactionSchema.index({ txHash: 1 }, { sparse: true });
+// txHash index is defined in schema with sparse: true
 transactionSchema.index({ createdAt: -1 });
 
 // Compound indexes for common queries

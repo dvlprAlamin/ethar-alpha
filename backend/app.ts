@@ -9,7 +9,11 @@ import express, {
 } from 'express';
 import cors from 'cors';
 import path from 'path';
-import { connectDB, initializeDatabase, getDatabaseStatus } from './models/index';
+import {
+  connectDB,
+  initializeDatabase,
+  getDatabaseStatus,
+} from './models/index';
 import { config, getEnvironmentSummary } from './config/environment';
 import logger from './utils/logger';
 import authRoutes from './routes/auth';
@@ -22,7 +26,9 @@ import adminRoutes from './routes/admin';
 import marketRoutes from './routes/market';
 
 // Initialize database connection with retry logic
-logger.dbInfo('Initializing database connection', { uri: config.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') });
+logger.dbInfo('Initializing database connection', {
+  uri: config.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'),
+});
 connectDB(config.MONGODB_URI)
   .then((connection) => {
     if (connection) {
@@ -46,12 +52,12 @@ const corsOptions = {
   origin: config.CLIENT_URL,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
 logger.info('CORS configured', { origin: config.CLIENT_URL });
 
-app.use(cors(corsOptions));
+app.use(cors({}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -77,18 +83,20 @@ app.use(
       const dbStatus = getDatabaseStatus();
       const memoryUsage = process.memoryUsage();
       const uptime = process.uptime();
-      
+
       // Determine overall health status
       const isHealthy = dbStatus.isConnected && dbStatus.readyState === 1;
       const statusCode = isHealthy ? 200 : 503;
-      
+
       const healthData = {
         success: true,
         status: isHealthy ? 'healthy' : 'degraded',
         timestamp: new Date().toISOString(),
         uptime: {
           seconds: Math.floor(uptime),
-          human: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${Math.floor(uptime % 60)}s`
+          human: `${Math.floor(uptime / 3600)}h ${Math.floor(
+            (uptime % 3600) / 60
+          )}m ${Math.floor(uptime % 60)}s`,
         },
         database: {
           connected: dbStatus.isConnected,
@@ -96,24 +104,26 @@ app.use(
           readyStateText: getReadyStateText(dbStatus.readyState),
           host: dbStatus.host || 'unknown',
           name: dbStatus.name || 'unknown',
-          connectionAttempts: dbStatus.connectionAttempts
+          connectionAttempts: dbStatus.connectionAttempts,
         },
         memory: {
           rss: `${Math.round(memoryUsage.rss / 1024 / 1024)}MB`,
           heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`,
           heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB`,
-          external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`
+          external: `${Math.round(memoryUsage.external / 1024 / 1024)}MB`,
         },
         environment: {
-           nodeVersion: process.version,
-           platform: process.platform,
-           arch: process.arch,
-           nodeEnv: config.NODE_ENV,
-           ...getEnvironmentSummary()
-         },
-        message: isHealthy ? 'All systems operational' : 'Service degraded - database connection issues'
+          nodeVersion: process.version,
+          platform: process.platform,
+          arch: process.arch,
+          nodeEnv: config.NODE_ENV,
+          ...getEnvironmentSummary(),
+        },
+        message: isHealthy
+          ? 'All systems operational'
+          : 'Service degraded - database connection issues',
       };
-      
+
       res.status(statusCode).json(healthData);
     } catch (error) {
       console.error('Health check error:', error);
@@ -122,7 +132,7 @@ app.use(
         status: 'error',
         message: 'Health check failed',
         timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
     }
   }
@@ -131,11 +141,16 @@ app.use(
 // Helper function to convert mongoose ready state to human readable text
 function getReadyStateText(readyState: number): string {
   switch (readyState) {
-    case 0: return 'disconnected';
-    case 1: return 'connected';
-    case 2: return 'connecting';
-    case 3: return 'disconnecting';
-    default: return 'unknown';
+    case 0:
+      return 'disconnected';
+    case 1:
+      return 'connected';
+    case 2:
+      return 'connecting';
+    case 3:
+      return 'disconnecting';
+    default:
+      return 'unknown';
   }
 }
 
@@ -143,22 +158,22 @@ function getReadyStateText(readyState: number): string {
  * error handler middleware
  */
 app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
-  const requestId = req.headers['x-request-id'] as string || 'unknown';
+  const requestId = (req.headers['x-request-id'] as string) || 'unknown';
   const userId = (req as any).user?.id;
-  
+
   logger.error('Request error', error, {
     requestId,
     userId,
     method: req.method,
     url: req.url,
     userAgent: req.headers['user-agent'],
-    ip: req.ip
+    ip: req.ip,
   });
-  
+
   res.status(500).json({
     success: false,
     error: 'Server internal error',
-    requestId
+    requestId,
   });
 });
 
@@ -166,20 +181,20 @@ app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
  * 404 handler
  */
 app.use((req: Request, res: Response) => {
-  const requestId = req.headers['x-request-id'] as string || 'unknown';
-  
+  const requestId = (req.headers['x-request-id'] as string) || 'unknown';
+
   logger.warn('Route not found', {
     requestId,
     method: req.method,
     url: req.url,
     userAgent: req.headers['user-agent'],
-    ip: req.ip
+    ip: req.ip,
   });
-  
+
   res.status(404).json({
     success: false,
     error: 'API not found',
-    requestId
+    requestId,
   });
 });
 

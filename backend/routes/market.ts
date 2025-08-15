@@ -35,60 +35,6 @@ router.get('/prices', async (req, res) => {
   }
 });
 
-// Get single crypto price
-router.get('/price/:symbol', async (req, res) => {
-  try {
-    const { symbol } = req.params;
-    const price = await cryptoService.getSinglePrice(symbol.toLowerCase());
-
-    if (!price) {
-      return res.status(404).json({
-        success: false,
-        message: 'Cryptocurrency not found',
-      });
-    }
-
-    res.json({
-      success: true,
-      data: price,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('Error fetching crypto price:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch crypto price',
-      error:
-        process.env.NODE_ENV === 'development'
-          ? error.message
-          : 'Internal server error',
-    });
-  }
-});
-
-// Get market data
-router.get('/data', async (req, res) => {
-  try {
-    const marketData = await cryptoService.getMarketData();
-
-    res.json({
-      success: true,
-      data: marketData,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error('Error fetching market data:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch market data',
-      error:
-        process.env.NODE_ENV === 'development'
-          ? error.message
-          : 'Internal server error',
-    });
-  }
-});
-
 // Get crypto news
 router.get('/news', async (req, res) => {
   try {
@@ -153,7 +99,6 @@ router.post('/cache/clear', authenticate, async (req, res) => {
       });
     }
 
-    cryptoService.clearCache();
     newsService.clearCache();
 
     res.json({

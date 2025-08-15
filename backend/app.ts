@@ -17,13 +17,10 @@ import {
 import { config, getEnvironmentSummary } from './config/environment';
 import logger from './utils/logger';
 import authRoutes from './routes/auth';
-import assetsRoutes from './routes/assets';
-import depositRoutes from './routes/deposit';
-import withdrawRoutes from './routes/withdraw';
-import poolsRoutes from './routes/pools';
-import tradeRoutes from './routes/trade';
 import adminRoutes from './routes/admin';
 import marketRoutes from './routes/market';
+import marketDataRoutes from './routes/marketData';
+import { schedulerService } from './services/schedulerService';
 
 // Initialize database connection with retry logic
 logger.dbInfo('Initializing database connection', {
@@ -36,6 +33,14 @@ connectDB(config.MONGODB_URI)
       initializeDatabase().catch((error) => {
         console.error('❌ Database initialization failed:', error);
       });
+
+      // Initialize scheduler service after database connection
+      try {
+        schedulerService.startScheduler();
+        console.log('✅ Stock data scheduler initialized');
+      } catch (error) {
+        console.error('❌ Failed to initialize scheduler:', error);
+      }
     } else {
       console.warn('⚠️ Server starting without database connection');
     }
@@ -65,13 +70,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
  * API Routes
  */
 app.use('/api/auth', authRoutes);
-app.use('/api/assets', assetsRoutes);
-app.use('/api/deposit', depositRoutes);
-app.use('/api/withdraw', withdrawRoutes);
-app.use('/api/pools', poolsRoutes);
-app.use('/api/trade', tradeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/market', marketRoutes);
+app.use('/api', marketDataRoutes);
 
 /**
  * Enhanced health check endpoint for Railway deployment monitoring

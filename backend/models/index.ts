@@ -1,18 +1,12 @@
 // Export all models
 export { default as User } from './User';
-export { default as Transaction } from './Transaction';
-export { default as Pool } from './Pool';
-export { default as PoolInvestment } from './PoolInvestment';
-export { default as TradeOrder } from './TradeOrder';
 export { default as AdminConfig } from './AdminConfig';
+export { default as Stock } from './Stock';
 
 // Export all interfaces
 export type { IUser } from './User';
-export type { ITransaction } from './Transaction';
-export type { IPool } from './Pool';
-export type { IPoolInvestment } from './PoolInvestment';
-export type { ITradeOrder } from './TradeOrder';
 export type { IAdminConfig } from './AdminConfig';
+export type { IStock } from './Stock';
 
 // Re-export mongoose for convenience
 export { default as mongoose } from 'mongoose';
@@ -27,7 +21,10 @@ let connectionAttempts = 0;
 const MAX_RETRY_ATTEMPTS = 5;
 const RETRY_DELAY_BASE = 1000; // 1 second base delay
 
-export const connectDB = async (mongoUri: string, retryAttempt = 0): Promise<typeof mongoose | null> => {
+export const connectDB = async (
+  mongoUri: string,
+  retryAttempt = 0
+): Promise<typeof mongoose | null> => {
   try {
     // If already connected, return existing connection
     if (isConnected && mongoose.connection.readyState === 1) {
@@ -35,8 +32,11 @@ export const connectDB = async (mongoUri: string, retryAttempt = 0): Promise<typ
       return mongoose;
     }
 
-    logger.dbInfo('Attempting to connect to MongoDB', { attempt: retryAttempt + 1, maxRetries: MAX_RETRY_ATTEMPTS });
-    
+    logger.dbInfo('Attempting to connect to MongoDB', {
+      attempt: retryAttempt + 1,
+      maxRetries: MAX_RETRY_ATTEMPTS,
+    });
+
     const conn = await mongoose.connect(mongoUri, {
       // Modern connection options
       maxPoolSize: 10, // Maintain up to 10 socket connections
@@ -51,14 +51,14 @@ export const connectDB = async (mongoUri: string, retryAttempt = 0): Promise<typ
       host: mongoose.connection.host,
       port: mongoose.connection.port,
       name: mongoose.connection.name,
-      readyState: mongoose.connection.readyState
+      readyState: mongoose.connection.readyState,
     });
-    
+
     // Handle connection events
     mongoose.connection.on('error', (err) => {
       logger.dbError('MongoDB connection error', err, {
         readyState: mongoose.connection.readyState,
-        host: mongoose.connection.host
+        host: mongoose.connection.host,
       });
       isConnected = false;
     });
@@ -66,16 +66,16 @@ export const connectDB = async (mongoUri: string, retryAttempt = 0): Promise<typ
     mongoose.connection.on('disconnected', () => {
       logger.dbInfo('MongoDB disconnected', {
         readyState: mongoose.connection.readyState,
-        wasConnected: isConnected
+        wasConnected: isConnected,
       });
       isConnected = false;
       // Attempt to reconnect after disconnection
       setTimeout(() => {
         if (!isConnected) {
           logger.dbInfo('Attempting to reconnect to MongoDB', {
-            reconnectDelayMs: 5000
+            reconnectDelayMs: 5000,
           });
-          connectDB(mongoUri, 0).catch(err => {
+          connectDB(mongoUri, 0).catch((err) => {
             logger.dbError('Failed to reconnect to MongoDB', err as Error);
           });
         }
@@ -87,7 +87,7 @@ export const connectDB = async (mongoUri: string, retryAttempt = 0): Promise<typ
         host: mongoose.connection.host,
         port: mongoose.connection.port,
         name: mongoose.connection.name,
-        readyState: mongoose.connection.readyState
+        readyState: mongoose.connection.readyState,
       });
       isConnected = true;
     });
@@ -110,18 +110,21 @@ export const connectDB = async (mongoUri: string, retryAttempt = 0): Promise<typ
   } catch (error) {
     isConnected = false;
     connectionAttempts++;
-    logger.dbError('MongoDB connection failed', error as Error, { attempt: retryAttempt + 1, maxRetries: MAX_RETRY_ATTEMPTS });
-    
+    logger.dbError('MongoDB connection failed', error as Error, {
+      attempt: retryAttempt + 1,
+      maxRetries: MAX_RETRY_ATTEMPTS,
+    });
+
     // Retry logic with exponential backoff
     if (retryAttempt < MAX_RETRY_ATTEMPTS - 1) {
       const delay = RETRY_DELAY_BASE * Math.pow(2, retryAttempt);
-      logger.dbInfo(`Retrying MongoDB connection`, { 
-        attempt: retryAttempt + 1, 
-        maxRetries: MAX_RETRY_ATTEMPTS, 
+      logger.dbInfo(`Retrying MongoDB connection`, {
+        attempt: retryAttempt + 1,
+        maxRetries: MAX_RETRY_ATTEMPTS,
         delayMs: delay,
-        nextAttemptIn: `${delay}ms`
+        nextAttemptIn: `${delay}ms`,
       });
-      
+
       return new Promise((resolve) => {
         setTimeout(async () => {
           const result = await connectDB(mongoUri, retryAttempt + 1);
@@ -129,11 +132,15 @@ export const connectDB = async (mongoUri: string, retryAttempt = 0): Promise<typ
         }, delay);
       });
     } else {
-      logger.dbError('All MongoDB connection attempts failed', new Error('Max retries exceeded'), {
-        totalAttempts: MAX_RETRY_ATTEMPTS,
-        finalError: 'Max retries exceeded',
-        serverStatus: 'continuing without database'
-      });
+      logger.dbError(
+        'All MongoDB connection attempts failed',
+        new Error('Max retries exceeded'),
+        {
+          totalAttempts: MAX_RETRY_ATTEMPTS,
+          finalError: 'Max retries exceeded',
+          serverStatus: 'continuing without database',
+        }
+      );
       return null;
     }
   }
@@ -146,7 +153,7 @@ export const getDatabaseStatus = () => {
     readyState: mongoose.connection.readyState,
     host: mongoose.connection.host,
     name: mongoose.connection.name,
-    connectionAttempts
+    connectionAttempts,
   };
 };
 
@@ -155,11 +162,11 @@ export const initializeDatabase = async () => {
   try {
     const AdminConfig = (await import('./AdminConfig')).default;
     const User = (await import('./User')).default;
-    
+
     // Initialize admin config if it doesn't exist
     await AdminConfig.getConfig();
     logger.dbInfo('Admin configuration initialized');
-    
+
     // Check if admin user exists, create if not
     const adminExists = await User.findOne({ role: 'admin' });
     if (!adminExists) {
@@ -169,25 +176,27 @@ export const initializeDatabase = async () => {
         name: 'Platform Administrator',
         role: 'admin',
         twoFactorSecret: {
-          isEnabled: false
+          isEnabled: false,
         },
         balances: {
           BTC: 0,
           ETH: 0,
           TRC20: 0,
-          USD: 0
-        }
+          USD: 0,
+        },
       });
-      
+
       await adminUser.save();
-      logger.dbInfo('Default admin user created successfully', { 
+      logger.dbInfo('Default admin user created successfully', {
         email: 'admin@crypto-platform.com',
-        userId: adminUser._id 
+        userId: adminUser._id,
       });
     } else {
-      logger.dbInfo('Default admin user already exists', { email: 'admin@crypto-platform.com' });
+      logger.dbInfo('Default admin user already exists', {
+        email: 'admin@crypto-platform.com',
+      });
     }
-    
+
     logger.dbInfo('Database initialization completed');
   } catch (error) {
     logger.dbError('Error during database initialization', error as Error);

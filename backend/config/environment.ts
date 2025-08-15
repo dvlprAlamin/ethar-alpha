@@ -36,6 +36,12 @@ interface EnvironmentConfig {
   // Admin
   ADMIN_EMAIL: string;
   ADMIN_PASSWORD: string;
+  
+  // External APIs
+  OPENSEA_API_KEY: string;
+  STOCK_API_KEY: string;
+  STOCK_API_BASE_URL: string;
+  COINGECKO_API_BASE_URL: string;
 }
 
 /**
@@ -78,7 +84,13 @@ export function getEnvironmentConfig(): EnvironmentConfig {
     
     // Admin defaults
     ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@crypto-platform.com',
-    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123'
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'admin123',
+    
+    // External API configuration
+    OPENSEA_API_KEY: process.env.OPENSEA_API_KEY || '',
+    STOCK_API_KEY: process.env.STOCK_API_KEY || '',
+    STOCK_API_BASE_URL: process.env.STOCK_API_BASE_URL || 'https://www.alphavantage.co/query',
+    COINGECKO_API_BASE_URL: process.env.COINGECKO_API_BASE_URL || 'https://api.coingecko.com/api/v3'
   };
   
   // Validate port numbers
@@ -135,6 +147,8 @@ export function getEnvironmentConfig(): EnvironmentConfig {
   console.log(`   SERVER_URL: ${config.SERVER_URL}`);
   console.log(`   MONGODB_URI: ${config.MONGODB_URI ? '✅ Set' : '❌ Missing'}`);
   console.log(`   JWT_SECRET: ${config.JWT_SECRET ? '✅ Set' : '❌ Missing'}`);
+  console.log(`   OPENSEA_API_KEY: ${config.OPENSEA_API_KEY ? '✅ Set' : '⚠️ Missing (NFT data will use mock data)'}`);
+  console.log(`   STOCK_API_KEY: ${config.STOCK_API_KEY ? '✅ Set' : '⚠️ Missing (Stock data will use mock data)'}`);
   
   // Log warnings
   if (warnings.length > 0) {
@@ -186,5 +200,9 @@ export const {
   SERVER_URL,
   WS_PORT,
   ADMIN_EMAIL,
-  ADMIN_PASSWORD
+  ADMIN_PASSWORD,
+  OPENSEA_API_KEY,
+  STOCK_API_KEY,
+  STOCK_API_BASE_URL,
+  COINGECKO_API_BASE_URL
 } = config;

@@ -1,6 +1,5 @@
 import React from 'react';
 import { Shield, Zap, Users, Lock, Award, Globe } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 interface FeatureProps {
   icon: React.ReactNode;
@@ -72,7 +71,7 @@ const WhyChooseUs: React.FC = () => {
           <div className="flex items-center justify-center mb-4">
             <Award className="h-8 w-8 text-cyan-400 mr-3" />
             <h2 className="text-3xl sm:text-4xl font-bold text-white">
-              Why Choose Our Platform?
+              Why Choose Ethar Alpha?
             </h2>
           </div>
           <p className="text-xl text-slate-300 max-w-3xl mx-auto">
@@ -91,27 +90,6 @@ const WhyChooseUs: React.FC = () => {
               description={feature.description}
             />
           ))}
-        </div>
-
-        {/* Call to Action */}
-        <div className="text-center mt-16">
-          <div className="bg-gradient-to-r from-cyan-600/10 to-blue-600/10 border border-cyan-500/20 rounded-2xl p-8">
-            <h3 className="text-2xl font-bold text-white mb-4">
-              Ready to Start Trading?
-            </h3>
-            <p className="text-slate-300 mb-6 max-w-2xl mx-auto">
-              Join thousands of traders who trust our platform for their
-              cryptocurrency investments. Start your journey today with just a
-              few clicks.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to={'/register'}>
-                <button className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl">
-                  Get Started Now
-                </button>
-              </Link>
-            </div>
-          </div>
         </div>
       </div>
     </section>

@@ -1,23 +1,24 @@
 import React from 'react';
-import { useAuthStore } from '../store/authStore';
 
 import MarketPriceSection from '../components/MarketPriceSection';
+import NewsSection from './../components/NewsSection';
+import WhyChooseUs from './../components/WhyChooseUs';
+import Footer from './../components/Footer';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuthStore();
-
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-slate-300">Welcome back, {user?.name}</p>
-        </div>
-      </div>
+    <div className="bg-slate-950">
+      <div>
+        <MarketPriceSection isDashboard />
+        {/* News Section */}
+        <NewsSection />
 
-      {/* Real-time Market Price Section */}
-      <MarketPriceSection />
+        {/* Why Choose Us Section */}
+        <WhyChooseUs />
+
+        {/* Footer */}
+        <Footer />
+      </div>
     </div>
   );
 };

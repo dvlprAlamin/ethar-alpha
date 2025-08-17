@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { useWebSocketStore } from '../store/websocketStore';
 import {
   Home,
   TrendingUp,
@@ -21,7 +20,6 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const { isConnected } = useWebSocketStore();
   const [navigationOpen, setNavigationOpen] = useState(false);
 
   // const unreadNotifications = notifications.filter((n) => !n.read);
@@ -107,21 +105,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Right side - User info and logout */}
           <div className="flex items-center space-x-4">
-            {/* Connection status */}
-            <div className="flex items-center space-x-2">
-              {isConnected ? (
-                <>
-                  {/* <Wifi className="w-4 h-4 text-green-500" />
-                  <span className="text-xs text-green-600">Connected</span> */}
-                </>
-              ) : (
-                <>
-                  {/* <WifiOff className="w-4 h-4 text-red-500" />
-                  <span className="text-xs text-red-600">Disconnected</span> */}
-                </>
-              )}
-            </div>
-
             {/* User info */}
             <div className="flex items-center space-x-3">
               <div className="flex items-center space-x-2">
@@ -148,7 +131,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 p-4 sm:p-6 overflow-auto bg-slate-950">
+      <main className="flex-1  overflow-auto bg-slate-950">
         {children || <Outlet />}
       </main>
 

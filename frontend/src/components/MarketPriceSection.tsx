@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
+import { useAuthStore } from './../store/authStore';
 
 interface CryptoData {
   id: string;
@@ -29,14 +30,17 @@ interface StockData {
 
 type TabType = 'crypto' | 'nft' | 'stocks';
 
-const MarketPriceSection: React.FC = () => {
+const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
+  isDashboard,
+}) => {
+  const { user } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabType>('crypto');
   const [searchTerm] = useState('');
   const [cryptoData, setCryptoData] = useState<CryptoData[]>([]);
   const [nftData, setNftData] = useState<NFTData[]>([]);
   const [stockData, setStockData] = useState<StockData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [, setLastUpdate] = useState<Date>(new Date());
 
   // Unified fetch function for all market data types
   const fetchMarketData = async (type: TabType) => {
@@ -202,168 +206,148 @@ const MarketPriceSection: React.FC = () => {
   );
 
   return (
-    <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 mb-6">
-      {/* Header */}
-      <div className="p-6 border-b border-slate-700">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            {/* <h2 className="text-xl font-bold text-white">
-              🔹 Real-time Market Prices
-            </h2> */}
-            <p className="text-sm text-slate-400 mt-1">
-              Last updated: {lastUpdate.toLocaleTimeString()}
-            </p>
+    <div className="py-8 bg-slate-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {isDashboard ? (
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-slate-300 mb-5">Welcome back, {user?.name}</p>
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
-            {/* Search */}
-            {/* <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search assets..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-slate-800 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm text-white placeholder-slate-400"
-              />
-            </div> */}
-            {/* Refresh Button */}
-            <button
-              onClick={() => {
-                fetchMarketData(activeTab);
-                setLastUpdate(new Date());
-              }}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-              disabled={loading}
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`}
-              />
-            </button>
+        ) : null}
+        <div className="bg-slate-900 rounded-lg shadow-sm border border-slate-700 mb-6">
+          {/* Header */}
+          <div className="p-6 border-b border-slate-700">
+            {/* Tabs */}
+            <div className="flex space-x-1 mt-4 bg-slate-800 p-1 rounded-lg">
+              <button
+                onClick={() => setActiveTab('crypto')}
+                className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'crypto'
+                    ? 'bg-cyan-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Crypto Currencies
+              </button>
+              <button
+                onClick={() => setActiveTab('nft')}
+                className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'nft'
+                    ? 'bg-cyan-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                NFTs
+              </button>
+              <button
+                onClick={() => setActiveTab('stocks')}
+                className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'stocks'
+                    ? 'bg-cyan-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Stocks &amp; Tokens
+              </button>
+            </div>
           </div>
-        </div>
 
-        {/* Tabs */}
-        <div className="flex space-x-1 mt-4 bg-slate-800 p-1 rounded-lg">
-          <button
-            onClick={() => setActiveTab('crypto')}
-            className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'crypto'
-                ? 'bg-cyan-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Crypto Currencies
-          </button>
-          <button
-            onClick={() => setActiveTab('nft')}
-            className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'nft'
-                ? 'bg-cyan-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            NFTs
-          </button>
-          <button
-            onClick={() => setActiveTab('stocks')}
-            className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors ${
-              activeTab === 'stocks'
-                ? 'bg-cyan-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Stocks &amp; Tokens
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-6">
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin text-cyan-500" />
-            <span className="ml-2 text-slate-400">Loading market data...</span>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Cryptocurrency Tab */}
-            {activeTab === 'crypto' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredCryptoData.map((crypto) => (
-                  <div
-                    key={crypto.id}
-                    className="p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-all"
-                  >
-                    <div className="flex items-center space-x-3 mb-3">
-                      <img
-                        src={crypto.image}
-                        alt={crypto.name}
-                        className="w-8 h-8 rounded-full"
-                      />
-                      <div>
-                        <p className="font-semibold text-white">
-                          {crypto.symbol.toUpperCase()}
-                        </p>
-                        <p className="text-sm text-slate-400">{crypto.name}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-white">
-                          {formatPrice(crypto.current_price)}
-                        </span>
-                        <div
-                          className={`flex items-center space-x-1 ${
-                            crypto.price_change_percentage_24h >= 0
-                              ? 'text-green-600'
-                              : 'text-red-600'
-                          }`}
-                        >
-                          {crypto.price_change_percentage_24h >= 0 ? (
-                            <TrendingUp className="w-4 h-4" />
-                          ) : (
-                            <TrendingDown className="w-4 h-4" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {crypto.price_change_percentage_24h >= 0 ? '+' : ''}
-                            {crypto.price_change_percentage_24h.toFixed(2)}%
-                          </span>
+          {/* Content */}
+          <div className="p-6">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <RefreshCw className="w-6 h-6 animate-spin text-cyan-500" />
+                <span className="ml-2 text-slate-400">
+                  Loading market data...
+                </span>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Cryptocurrency Tab */}
+                {activeTab === 'crypto' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredCryptoData.map((crypto) => (
+                      <div
+                        key={crypto.id}
+                        className="p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <div className="flex items-center space-x-3 mb-3">
+                          <img
+                            src={crypto.image}
+                            alt={crypto.name}
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <div>
+                            <p className="font-semibold text-white">
+                              {crypto.symbol.toUpperCase()}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {crypto.name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold text-white">
+                              {formatPrice(crypto.current_price)}
+                            </span>
+                            <div
+                              className={`flex items-center space-x-1 ${
+                                crypto.price_change_percentage_24h >= 0
+                                  ? 'text-green-600'
+                                  : 'text-red-600'
+                              }`}
+                            >
+                              {crypto.price_change_percentage_24h >= 0 ? (
+                                <TrendingUp className="w-4 h-4" />
+                              ) : (
+                                <TrendingDown className="w-4 h-4" />
+                              )}
+                              <span className="text-sm font-medium">
+                                {crypto.price_change_percentage_24h >= 0
+                                  ? '+'
+                                  : ''}
+                                {crypto.price_change_percentage_24h.toFixed(2)}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            Market Cap: {formatLargeNumber(crypto.market_cap)}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-xs text-slate-400">
-                        Market Cap: {formatLargeNumber(crypto.market_cap)}
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                )}
 
-            {/* NFT Tab */}
-            {activeTab === 'nft' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredNFTData.map((nft, index) => (
-                  <div
-                    key={index}
-                    className="p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-all"
-                  >
-                    <div className="flex items-center space-x-3 mb-3">
-                      <img
-                        src={nft.image_url}
-                        alt={nft.name}
-                        className="w-8 h-8 rounded-lg"
-                      />
-                      <div>
-                        <p className="font-semibold text-white">{nft.name}</p>
-                        <p className="text-sm text-slate-400">Collection</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-white">
-                          {/* {formatPrice(nft.floor_price, 'ETH')} */}
-                        </span>
-                        {/* <div
+                {/* NFT Tab */}
+                {activeTab === 'nft' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredNFTData.map((nft, index) => (
+                      <div
+                        key={index}
+                        className="p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <div className="flex items-center space-x-3 mb-3">
+                          <img
+                            src={nft.image_url}
+                            alt={nft.name}
+                            className="w-8 h-8 rounded-lg"
+                          />
+                          <div>
+                            <p className="font-semibold text-white">
+                              {nft.name}
+                            </p>
+                            <p className="text-sm text-slate-400">Collection</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold text-white">
+                              {/* {formatPrice(nft.floor_price, 'ETH')} */}
+                            </span>
+                            {/* <div
                           className={`flex items-center space-x-1 ${
                             nft.floor_price_change_24h >= 0
                               ? 'text-green-600'
@@ -380,81 +364,86 @@ const MarketPriceSection: React.FC = () => {
                             {nft.floor_price_change_24h.toFixed(2)}%
                           </span>
                         </div> */}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {/* Volume: {nft.volume_24h.toFixed(1)} ETH */}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Stocks Tab */}
-            {activeTab === 'stocks' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {filteredStockData.map((stock) => (
-                  <div
-                    key={stock.symbol}
-                    className="p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-all"
-                  >
-                    <div className="flex items-center space-x-3 mb-3">
-                      <div className="w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center">
-                        <span className="text-xs font-bold text-white">
-                          {stock.symbol.slice(0, 2)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white">
-                          {stock.symbol}
-                        </p>
-                        <p className="text-sm text-slate-400">{stock.name}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-white">
-                          {formatPrice(stock.price)}
-                        </span>
-                        <div
-                          className={`flex items-center space-x-1 ${
-                            stock.changePercent >= 0
-                              ? 'text-green-600'
-                              : 'text-red-600'
-                          }`}
-                        >
-                          {stock.changePercent >= 0 ? (
-                            <TrendingUp className="w-4 h-4" />
-                          ) : (
-                            <TrendingDown className="w-4 h-4" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {stock.changePercent >= 0 ? '+' : ''}
-                            {stock.changePercent.toFixed(2)}%
-                          </span>
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {/* Volume: {nft.volume_24h.toFixed(1)} ETH */}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-xs text-slate-400">
-                        Change: {formatPrice(stock.change)}
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
+                )}
 
-            {/* No results */}
-            {((activeTab === 'crypto' && filteredCryptoData.length === 0) ||
-              (activeTab === 'nft' && filteredNFTData.length === 0) ||
-              (activeTab === 'stocks' && filteredStockData.length === 0)) && (
-              <div className="text-center py-8">
-                <p className="text-slate-400">
-                  No assets found matching your search.
-                </p>
+                {/* Stocks Tab */}
+                {activeTab === 'stocks' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredStockData.map((stock) => (
+                      <div
+                        key={stock.symbol}
+                        className="p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-all"
+                      >
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-8 h-8 bg-cyan-600 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-white">
+                              {stock.symbol.slice(0, 2)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-white">
+                              {stock.symbol}
+                            </p>
+                            <p className="text-sm text-slate-400">
+                              {stock.name}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-lg font-bold text-white">
+                              {formatPrice(stock.price)}
+                            </span>
+                            <div
+                              className={`flex items-center space-x-1 ${
+                                stock.changePercent >= 0
+                                  ? 'text-green-600'
+                                  : 'text-red-600'
+                              }`}
+                            >
+                              {stock.changePercent >= 0 ? (
+                                <TrendingUp className="w-4 h-4" />
+                              ) : (
+                                <TrendingDown className="w-4 h-4" />
+                              )}
+                              <span className="text-sm font-medium">
+                                {stock.changePercent >= 0 ? '+' : ''}
+                                {stock.changePercent.toFixed(2)}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            Change: {formatPrice(stock.change)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* No results */}
+                {((activeTab === 'crypto' && filteredCryptoData.length === 0) ||
+                  (activeTab === 'nft' && filteredNFTData.length === 0) ||
+                  (activeTab === 'stocks' &&
+                    filteredStockData.length === 0)) && (
+                  <div className="text-center py-8">
+                    <p className="text-slate-400">
+                      No assets found matching your search.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

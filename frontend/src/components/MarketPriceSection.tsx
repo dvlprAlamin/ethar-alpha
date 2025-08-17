@@ -186,11 +186,11 @@ const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
     return `$${num.toFixed(0)}`;
   };
 
-  const filteredCryptoData = cryptoData.filter(
-    (item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // const filteredCryptoData = cryptoData.filter(
+  //   (item) =>
+  //     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     item.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
 
   const filteredNFTData = nftData.filter(
     (item) =>
@@ -267,7 +267,7 @@ const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
                 {/* Cryptocurrency Tab */}
                 {activeTab === 'crypto' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {filteredCryptoData.map((crypto) => (
+                    {cryptoData.map((crypto) => (
                       <div
                         key={crypto.id}
                         className="p-4 bg-slate-800 border border-slate-600 rounded-lg hover:bg-slate-700 transition-all"
@@ -430,7 +430,7 @@ const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
                 )}
 
                 {/* No results */}
-                {((activeTab === 'crypto' && filteredCryptoData.length === 0) ||
+                {/* {((activeTab === 'crypto' && filteredCryptoData.length === 0) ||
                   (activeTab === 'nft' && filteredNFTData.length === 0) ||
                   (activeTab === 'stocks' &&
                     filteredStockData.length === 0)) && (
@@ -439,7 +439,7 @@ const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
                       No assets found matching your search.
                     </p>
                   </div>
-                )}
+                )} */}
               </div>
             )}
           </div>

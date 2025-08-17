@@ -22,8 +22,8 @@ const NotFound: React.FC = () => {
             Page Not Found
           </h2>
           <p className="text-slate-400 text-lg leading-relaxed">
-            The page you're looking for doesn't exist or has been moved.
-            Let's get you back to trading!
+            The page you're looking for doesn't exist or has been moved. Let's
+            get you back to trading!
           </p>
         </div>
 
@@ -49,7 +49,7 @@ const NotFound: React.FC = () => {
             <Home className="w-5 h-5 mr-2" />
             Go to Homepage
           </Link>
-          
+
           <button
             onClick={() => window.history.back()}
             className="inline-flex items-center justify-center w-full px-6 py-3 bg-slate-800 text-slate-300 font-medium rounded-lg border border-slate-700 hover:bg-slate-700 hover:text-white transition-all duration-200 hover:border-slate-600"
@@ -57,37 +57,6 @@ const NotFound: React.FC = () => {
             <ArrowLeft className="w-5 h-5 mr-2" />
             Go Back
           </button>
-        </div>
-
-        {/* Additional Links */}
-        <div className="mt-8 pt-8 border-t border-slate-800">
-          <p className="text-slate-500 text-sm mb-4">Popular pages:</p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link
-              to="/dashboard"
-              className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors duration-200"
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="/trade"
-              className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors duration-200"
-            >
-              Trade
-            </Link>
-            <Link
-              to="/assets"
-              className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors duration-200"
-            >
-              Assets
-            </Link>
-            <Link
-              to="/support"
-              className="text-cyan-400 hover:text-cyan-300 text-sm transition-colors duration-200"
-            >
-              Support
-            </Link>
-          </div>
         </div>
       </div>
     </div>

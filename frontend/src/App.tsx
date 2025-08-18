@@ -13,6 +13,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Landing from './pages/Landing';
 import News from './pages/News';
+import Trade from './pages/Trade';
 // import Admin from './pages/Admin';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
@@ -145,6 +146,17 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <Layout>
                     <News />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/trade"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Trade />
                   </Layout>
                 </ProtectedRoute>
               }

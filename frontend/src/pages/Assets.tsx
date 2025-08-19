@@ -112,7 +112,6 @@ const Assets: React.FC = () => {
             </div>
           </div>
         </div>
-
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-4">
           <button 

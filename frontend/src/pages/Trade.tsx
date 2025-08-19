@@ -62,7 +62,7 @@ const Trade: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-white p-4">
       {/* Header */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-4">

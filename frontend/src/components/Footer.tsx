@@ -1,6 +1,5 @@
 import React from 'react';
 import { Twitter, Facebook, Instagram, Linkedin } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -22,16 +21,8 @@ const Footer: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-6 mb-4 md:mb-0">
               <p className="text-slate-400 text-sm">
-                © {currentYear} CryptoTrade. All rights reserved.
+                © {currentYear} Ethar Alpha. All rights reserved.
               </p>
-              <div className="flex items-center space-x-2">
-                <span className="text-slate-400 text-sm">Developed by</span>
-                <Link to="https://www.coolsheikh.com/" target="_blank">
-                  <div className="bg-gradient-to-r from-cyan-600 to-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">
-                    CoolSheikh
-                  </div>
-                </Link>
-              </div>
             </div>
 
             {/* Social Links */}

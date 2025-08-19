@@ -47,7 +47,7 @@ const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/api/market-data?type=${type}`
+        `${import.meta.env.VITE_API_URL}/market-data?type=${type}`
       );
 
       if (!response.ok) {

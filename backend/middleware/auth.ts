@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { User } from '../models/index';
 import speakeasy from 'speakeasy';
+import logger from '../utils/logger';
 
 // Extend Request interface to include user
 declare global {
@@ -21,19 +22,21 @@ interface JWTPayload {
 }
 
 // JWT Secret (should be in environment variables)
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  'your-super-secret-jwt-key-change-this-in-production';
 const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '7d';
 
 // Generate JWT token
-export const generateToken = (userId: string, email: string, role: string): string => {
+export const generateToken = (
+  userId: string,
+  email: string,
+  role: string
+): string => {
   const options: jwt.SignOptions = {
-    expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn']
+    expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
   };
-  return jwt.sign(
-    { userId, email, role },
-    JWT_SECRET,
-    options
-  );
+  return jwt.sign({ userId, email, role }, JWT_SECRET, options);
 };
 
 // Verify JWT token
@@ -41,57 +44,132 @@ export const verifyToken = (token: string): JWTPayload => {
   try {
     return jwt.verify(token, JWT_SECRET) as JWTPayload;
   } catch (error) {
-    throw new Error('Invalid token');
+    if (error instanceof jwt.TokenExpiredError) {
+      logger.warn('[AUTH] Token expired', { error: error.message });
+      throw new Error('Token expired');
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      logger.warn('[AUTH] Invalid token format', { error: error.message });
+      throw new Error('Invalid token');
+    } else {
+      logger.error(
+        '[AUTH] Token verification failed',
+        error instanceof Error ? error : new Error(String(error))
+      );
+      throw new Error('Token verification failed');
+    }
   }
 };
 
 // Authentication middleware
-export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticate = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.warn(
+        '[AUTH] Authentication failed: No authorization header or invalid format',
+        {
+          userAgent: req.headers['user-agent'],
+          ip: req.ip,
+        }
+      );
       return res.status(401).json({
         success: false,
-        message: 'Access token required'
+        message: 'Access token required',
       });
     }
 
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const decoded = verifyToken(token);
-    
-    // Get user from database
-    const user = await User.findById(decoded.userId).select('-passwordHash');
-    if (!user || !user.isActive) {
+
+    if (!token || token.trim() === '') {
+      logger.warn('[AUTH] Authentication failed: Empty token', {
+        userAgent: req.headers['user-agent'],
+        ip: req.ip,
+      });
       return res.status(401).json({
         success: false,
-        message: 'User not found or inactive'
+        message: 'Access token required',
+      });
+    }
+
+    const decoded = verifyToken(token);
+
+    // Get user from database
+    const user = await User.findById(decoded.userId).select('-passwordHash');
+    if (!user) {
+      logger.warn('[AUTH] Authentication failed: User not found', {
+        userId: decoded.userId,
+        userAgent: req.headers['user-agent'],
+        ip: req.ip,
+      });
+      return res.status(401).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    if (!user.isActive) {
+      logger.warn('[AUTH] Authentication failed: User inactive', {
+        userId: decoded.userId,
+        email: user.email,
+        userAgent: req.headers['user-agent'],
+        ip: req.ip,
+      });
+      return res.status(401).json({
+        success: false,
+        message: 'User account is inactive',
       });
     }
 
     req.user = user;
     next();
   } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid or expired token'
-    });
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+
+    // Return specific error message based on the error type
+    if (errorMessage === 'Token expired') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token expired',
+        code: 'TOKEN_EXPIRED',
+      });
+    } else if (errorMessage === 'Invalid token') {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token',
+        code: 'INVALID_TOKEN',
+      });
+    } else {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token',
+      });
+    }
   }
 };
 
 // Admin authorization middleware
-export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+export const requireAdmin = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   if (!req.user) {
     return res.status(401).json({
       success: false,
-      message: 'Authentication required'
+      message: 'Authentication required',
     });
   }
 
   if (req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
-      message: 'Admin access required'
+      message: 'Admin access required',
     });
   }
 
@@ -103,7 +181,7 @@ export const generate2FASecret = (email: string) => {
   return speakeasy.generateSecret({
     name: `Crypto Platform (${email})`,
     issuer: 'Crypto Trading Platform',
-    length: 32
+    length: 32,
   });
 };
 
@@ -112,7 +190,7 @@ export const verify2FAToken = (token: string, secret: string): boolean => {
     secret: secret,
     encoding: 'base32',
     token: token,
-    window: 2 // Allow 2 time steps (60 seconds) of variance
+    window: 2, // Allow 2 time steps (60 seconds) of variance
   });
 };
 
@@ -122,19 +200,23 @@ export const generate2FAQRCode = (secret: string, email: string): string => {
     secret: secret,
     label: email,
     issuer: 'Crypto Trading Platform',
-    encoding: 'base32'
+    encoding: 'base32',
   });
-  
+
   return otpauthUrl;
 };
 
 // Middleware to check 2FA if enabled
-export const check2FA = async (req: Request, res: Response, next: NextFunction) => {
+export const check2FA = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     if (!req.user) {
       return res.status(401).json({
         success: false,
-        message: 'Authentication required'
+        message: 'Authentication required',
       });
     }
 
@@ -145,22 +227,25 @@ export const check2FA = async (req: Request, res: Response, next: NextFunction) 
 
     // Check for 2FA token in headers
     const twoFactorToken = req.headers['x-2fa-token'] as string;
-    
+
     if (!twoFactorToken) {
       return res.status(401).json({
         success: false,
         message: '2FA token required',
-        requires2FA: true
+        requires2FA: true,
       });
     }
 
     // Verify 2FA token
-    const isValid = verify2FAToken(twoFactorToken, req.user.twoFactorSecret.secret);
-    
+    const isValid = verify2FAToken(
+      twoFactorToken,
+      req.user.twoFactorSecret.secret
+    );
+
     if (!isValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid 2FA token'
+        message: 'Invalid 2FA token',
       });
     }
 
@@ -168,7 +253,7 @@ export const check2FA = async (req: Request, res: Response, next: NextFunction) 
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: 'Error verifying 2FA token'
+      message: 'Error verifying 2FA token',
     });
   }
 };
@@ -178,12 +263,16 @@ const authAttempts = new Map<string, { count: number; lastAttempt: number }>();
 const MAX_AUTH_ATTEMPTS = 5;
 const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
 
-export const rateLimitAuth = (req: Request, res: Response, next: NextFunction) => {
+export const rateLimitAuth = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
   const now = Date.now();
-  
+
   const attempts = authAttempts.get(clientIP);
-  
+
   if (attempts) {
     // Reset if lockout period has passed
     if (now - attempts.lastAttempt > LOCKOUT_DURATION) {
@@ -192,11 +281,13 @@ export const rateLimitAuth = (req: Request, res: Response, next: NextFunction) =
       return res.status(429).json({
         success: false,
         message: 'Too many authentication attempts. Please try again later.',
-        retryAfter: Math.ceil((LOCKOUT_DURATION - (now - attempts.lastAttempt)) / 1000)
+        retryAfter: Math.ceil(
+          (LOCKOUT_DURATION - (now - attempts.lastAttempt)) / 1000
+        ),
       });
     }
   }
-  
+
   next();
 };
 
@@ -230,24 +321,47 @@ export const extractUserIdFromToken = (req: Request): string | null => {
 };
 
 // Middleware for optional authentication (doesn't fail if no token)
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
+export const optionalAuth = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return next(); // Continue without user
     }
 
     const token = authHeader.substring(7);
+
+    if (!token || token.trim() === '') {
+      return next(); // Continue without user
+    }
+
     const decoded = verifyToken(token);
-    
+
     const user = await User.findById(decoded.userId).select('-passwordHash');
     if (user && user.isActive) {
       req.user = user;
+    } else if (user && !user.isActive) {
+      logger.info('[AUTH] Optional auth: User inactive', {
+        userId: decoded.userId,
+        email: user.email,
+      });
+    } else {
+      logger.info('[AUTH] Optional auth: User not found', {
+        userId: decoded.userId,
+      });
     }
-    
+
     next();
   } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
+    logger.debug('[AUTH] Optional auth error (continuing without user)', {
+      error: errorMessage,
+    });
     // Continue without user if token is invalid
     next();
   }

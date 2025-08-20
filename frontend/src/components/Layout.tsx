@@ -11,6 +11,7 @@ import {
   CreditCard,
   HelpCircle,
   FileText,
+  Settings,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -24,7 +25,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // const unreadNotifications = notifications.filter((n) => !n.read);
 
-  const navigation = [
+  const baseNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Assets', href: '/assets', icon: Wallet },
     { name: 'History', href: '/history', icon: History },
@@ -33,6 +34,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Support', href: '/support', icon: HelpCircle },
     { name: 'White paper', href: '/whitepaper', icon: FileText },
   ];
+
+  const adminNavigation = [
+    { name: 'Admin', href: '/admin', icon: Settings },
+  ];
+
+  const navigation = user?.role === 'admin' 
+    ? [...baseNavigation, ...adminNavigation]
+    : baseNavigation;
 
   const handleLogout = () => {
     logout();

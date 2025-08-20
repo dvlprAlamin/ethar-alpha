@@ -19,6 +19,7 @@ import Assets from './pages/Assets';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
 import NotFound from './pages/NotFound';
+import Admin from './pages/Admin';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -173,7 +174,7 @@ const App: React.FC = () => {
                 </ProtectedRoute>
               }
             />
-            {/* <Route
+            <Route
               path="/admin"
               element={
                 <ProtectedRoute requireAdmin>
@@ -182,7 +183,7 @@ const App: React.FC = () => {
                   </Layout>
                 </ProtectedRoute>
               }
-            /> */}
+            />
 
             {/* Landing Page */}
             <Route path="/" element={<Landing />} />

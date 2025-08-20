@@ -49,10 +49,10 @@ const Card: React.FC<CardProps> = ({
   return (
     <div
       className={`
-        bg-white rounded-lg
+        bg-slate-900 rounded-lg
         ${paddingClasses[padding]}
         ${shadowClasses[shadow]}
-        ${border ? 'border border-gray-200' : ''}
+        ${border ? 'border border-slate-700' : ''}
         ${hover ? 'hover:shadow-md transition-shadow duration-200' : ''}
         ${className}
       `}
@@ -73,12 +73,12 @@ export const StatCard: React.FC<StatCardProps> = ({
   className = ''
 }) => {
   const iconColorClasses = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    red: 'bg-red-50 text-red-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
-    gray: 'bg-gray-50 text-gray-600'
+    blue: 'bg-blue-900/20 text-blue-400',
+    green: 'bg-green-900/20 text-green-400',
+    red: 'bg-red-900/20 text-red-400',
+    purple: 'bg-purple-900/20 text-purple-400',
+    orange: 'bg-orange-900/20 text-orange-400',
+    gray: 'bg-gray-900/20 text-gray-400'
   };
 
   if (loading) {
@@ -87,11 +87,11 @@ export const StatCard: React.FC<StatCardProps> = ({
         <div className="animate-pulse">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+              <div className="h-4 bg-slate-700 rounded w-3/4 mb-2"></div>
+              <div className="h-8 bg-slate-700 rounded w-1/2 mb-2"></div>
+              <div className="h-3 bg-slate-700 rounded w-1/3"></div>
             </div>
-            <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+            <div className="w-12 h-12 bg-slate-700 rounded-full"></div>
           </div>
         </div>
       </Card>
@@ -102,12 +102,12 @@ export const StatCard: React.FC<StatCardProps> = ({
     <Card className={className} hover>
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-600 truncate">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1 truncate">
+          <p className="text-sm font-medium text-slate-400 truncate">{title}</p>
+          <p className="text-2xl font-bold text-white mt-1 truncate">
             {typeof value === 'number' ? value.toLocaleString() : value}
           </p>
           {subtitle && (
-            <p className="text-sm text-gray-500 mt-1 truncate">{subtitle}</p>
+            <p className="text-sm text-slate-500 mt-1 truncate">{subtitle}</p>
           )}
           {trend && (
             <div className="flex items-center mt-2">

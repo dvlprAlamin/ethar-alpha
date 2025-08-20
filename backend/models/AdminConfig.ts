@@ -2,14 +2,22 @@ import mongoose from 'mongoose';
 
 export interface IAdminConfig extends mongoose.Document {
   depositAddresses: {
-    BTC: string;
-    ETH: string;
-    TRC20: string;
+    BTC?: string;
+    ETH?: string;
+    TRC20?: string;
+    BNB?: string;
+  };
+  qrCodes?: {
+    BTC?: string;
+    ETH?: string;
+    TRC20?: string;
+    BNB?: string;
   };
   withdrawalTaxRates: {
     BTC: number;
     ETH: number;
     TRC20: number;
+    BNB: number;
     USD?: number;
   };
   tradingParameters: {
@@ -36,8 +44,8 @@ export interface IAdminConfig extends mongoose.Document {
     alphaVantage?: string;
   };
   updatedAt: Date;
-  getWithdrawalTax(currency: 'BTC' | 'ETH' | 'TRC20' | 'USD', amount: number): number;
-  calculateWithdrawalTax(currency: 'BTC' | 'ETH' | 'TRC20' | 'USD', amount: number): number;
+  getWithdrawalTax(currency: 'BTC' | 'ETH' | 'TRC20' | 'BNB' | 'USD', amount: number): number;
+  calculateWithdrawalTax(currency: 'BTC' | 'ETH' | 'TRC20' | 'BNB' | 'USD', amount: number): number;
   validateTradeAmount(amount: number): boolean;
   calculateTradingFee(amount: number): number;
   isFeatureEnabled(feature: keyof IAdminConfig['platformSettings']): boolean;
@@ -52,10 +60,11 @@ const adminConfigSchema = new mongoose.Schema<IAdminConfig>({
   depositAddresses: {
     BTC: { 
       type: String, 
-      required: true,
+      required: false,
       trim: true,
       validate: {
         validator: function(v: string) {
+          if (!v) return true; // Allow empty values
           // Basic Bitcoin address validation
           return /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$|^bc1[a-z0-9]{39,59}$/.test(v);
         },
@@ -64,10 +73,11 @@ const adminConfigSchema = new mongoose.Schema<IAdminConfig>({
     },
     ETH: { 
       type: String, 
-      required: true,
+      required: false,
       trim: true,
       validate: {
         validator: function(v: string) {
+          if (!v) return true; // Allow empty values
           // Basic Ethereum address validation
           return /^0x[a-fA-F0-9]{40}$/.test(v);
         },
@@ -76,15 +86,47 @@ const adminConfigSchema = new mongoose.Schema<IAdminConfig>({
     },
     TRC20: { 
       type: String, 
-      required: true,
+      required: false,
       trim: true,
       validate: {
         validator: function(v: string) {
+          if (!v) return true; // Allow empty values
           // Basic TRON address validation
           return /^T[A-Za-z1-9]{33}$/.test(v);
         },
         message: 'Invalid TRON address format'
       }
+    },
+    BNB: { 
+      type: String, 
+      required: false,
+      trim: true,
+      validate: {
+        validator: function(v: string) {
+          if (!v) return true; // Allow empty values
+          // Basic BNB address validation (similar to Ethereum)
+          return /^0x[a-fA-F0-9]{40}$/.test(v);
+        },
+        message: 'Invalid BNB address format'
+      }
+    }
+  },
+  qrCodes: {
+    BTC: {
+      type: String,
+      trim: true
+    },
+    ETH: {
+      type: String,
+      trim: true
+    },
+    TRC20: {
+      type: String,
+      trim: true
+    },
+    BNB: {
+      type: String,
+      trim: true
     }
   },
   withdrawalTaxRates: {
@@ -101,6 +143,12 @@ const adminConfigSchema = new mongoose.Schema<IAdminConfig>({
       max: 0.1
     },
     TRC20: { 
+      type: Number, 
+      default: 0.001,
+      min: 0,
+      max: 0.1
+    },
+    BNB: { 
       type: Number, 
       default: 0.001,
       min: 0,
@@ -216,12 +264,14 @@ adminConfigSchema.statics.getConfig = async function() {
       depositAddresses: {
         BTC: "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
         ETH: "0x742d35Cc6634C0532925a3b8D4C9db96590645d8",
-        TRC20: "TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7"
+        TRC20: "TLa2f6VPqDgRE67v1736s7bJ8Ray5wYjU7",
+        BNB: "0x742d35Cc6634C0532925a3b8D4C9db96590645d8"
       },
       withdrawalTaxRates: {
         BTC: 0.001,
         ETH: 0.002,
         TRC20: 0.001,
+        BNB: 0.001,
         USD: 0.01
       },
       tradingParameters: {
@@ -255,13 +305,13 @@ adminConfigSchema.statics.updateConfig = async function(updates: Partial<IAdminC
 };
 
 // Method to validate withdrawal tax rate
-adminConfigSchema.methods.getWithdrawalTax = function(currency: 'BTC' | 'ETH' | 'TRC20' | 'USD', amount: number) {
+adminConfigSchema.methods.getWithdrawalTax = function(currency: 'BTC' | 'ETH' | 'TRC20' | 'BNB' | 'USD', amount: number) {
   const rate = this.withdrawalTaxRates[currency] || 0;
   return amount * rate;
 };
 
 // Alias for getWithdrawalTax
-adminConfigSchema.methods.calculateWithdrawalTax = function(currency: 'BTC' | 'ETH' | 'TRC20' | 'USD', amount: number) {
+adminConfigSchema.methods.calculateWithdrawalTax = function(currency: 'BTC' | 'ETH' | 'TRC20' | 'BNB' | 'USD', amount: number) {
   return this.getWithdrawalTax(currency, amount);
 };
 

@@ -9,7 +9,8 @@ import {
   Bar,
   ComposedChart,
 } from 'recharts';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 // Static data for demonstration
 const priceData = [
@@ -27,11 +28,16 @@ const priceData = [
   { time: '11:45', price: 105760, volume: 2000, ma5: 105620, ma20: 105410 },
 ];
 
+type TradeStatus = 'idle' | 'active' | 'completed';
+
 const Trade: React.FC = () => {
   const [amount, setAmount] = useState('');
-
+  const [tradeStatus, setTradeStatus] = useState<TradeStatus>('idle');
+  const [error, setError] = useState('');
   const [currentPrice, setCurrentPrice] = useState(105760);
   const [priceChange, setPriceChange] = useState(1.06);
+  
+  const { user, updateBalance } = useAuthStore();
 
   // Simulate real-time price updates
   useEffect(() => {
@@ -57,6 +63,33 @@ const Trade: React.FC = () => {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     }).format(num);
+  };
+
+  const handleContinue = () => {
+    setError('');
+    const tradeAmount = parseFloat(amount);
+    
+    if (!tradeAmount || tradeAmount <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+    
+    if (!user?.balances?.USD || user.balances.USD < tradeAmount) {
+      setError('Insufficient balance');
+      return;
+    }
+    
+    // Start trade and reduce balance
+    updateBalance('USD', user.balances.USD - tradeAmount);
+    setTradeStatus('active');
+  };
+  
+  const handleExitTrade = () => {
+    setTradeStatus('completed');
+    setAmount('');
+    setError('');
+    // Reset to idle after a brief moment
+    setTimeout(() => setTradeStatus('idle'), 1000);
   };
 
   return (
@@ -215,10 +248,32 @@ const Trade: React.FC = () => {
           <div className="space-y-6 mt-5">
             {/* Order Placement */}
             <div className="bg-slate-900 rounded-lg p-6">
+              {/* Balance Display */}
+              <div className="mb-4 p-3 bg-slate-800 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400">Available Balance:</span>
+                  <span className="text-lg font-semibold text-green-400">
+                    {formatPrice(user?.balances?.USD || 0)}
+                  </span>
+                </div>
+                {tradeStatus !== 'idle' && (
+                  <div className="mt-2 pt-2 border-t border-slate-700">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Trade Status:</span>
+                      <span className={`font-semibold ${
+                        tradeStatus === 'active' ? 'text-yellow-400' : 'text-blue-400'
+                      }`}>
+                        {tradeStatus === 'active' ? 'Active' : 'Completed'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Amount Input */}
               <div className="mb-4">
                 <label className="block text-sm text-slate-400 mb-2">
-                  Amount
+                  Amount (USD)
                 </label>
                 <input
                   type="number"
@@ -226,22 +281,45 @@ const Trade: React.FC = () => {
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full p-3 bg-slate-800 border border-slate-700 rounded-lg text-white focus:border-blue-500 focus:outline-none"
                   placeholder="0.00"
+                  disabled={tradeStatus === 'active'}
                 />
                 <div className="flex justify-between mt-2 text-xs text-slate-400">
-                  <span>Available: </span>
-                  <button className="text-blue-400 hover:text-blue-300">
+                  <span>Available: {formatPrice(user?.balances?.USD || 0)}</span>
+                  <button 
+                    className="text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={tradeStatus === 'active'}
+                    onClick={() => setAmount((user?.balances?.USD || 0).toString())}
+                  >
                     Max
                   </button>
                 </div>
               </div>
 
-              {/* Place Order Button */}
-              <button
-                className={`w-full py-3 rounded-lg font-medium transition-colors bg-green-600 hover:bg-green-700 text-white  
-               `}
-              >
-                Continue
-              </button>
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4 text-red-400" />
+                  <span className="text-red-400 text-sm">{error}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {tradeStatus === 'idle' || tradeStatus === 'completed' ? (
+                <button
+                  onClick={handleContinue}
+                  className="w-full py-3 rounded-lg font-medium transition-colors bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!user?.balances?.USD || user.balances.USD <= 0}
+                >
+                  Continue
+                </button>
+              ) : (
+                <button
+                  onClick={handleExitTrade}
+                  className="w-full py-3 rounded-lg font-medium transition-colors bg-red-600 hover:bg-red-700 text-white"
+                >
+                  Exit Trade
+                </button>
+              )}
             </div>
           </div>
         </div>

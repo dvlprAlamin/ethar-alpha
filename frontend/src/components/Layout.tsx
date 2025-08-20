@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <header className="sticky top-0 z-50 bg-slate-800 shadow-sm border-b border-slate-700">
         <div className="flex items-center justify-between h-16 px-4 sm:px-6">
           {/* Logo with navigation popup */}
-          <div className="relative">
+          <div className="relative max-w-7xl">
             <div
               className="flex items-center space-x-3 cursor-pointer group"
               onMouseEnter={() => setNavigationOpen(true)}

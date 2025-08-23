@@ -2,9 +2,11 @@
  * Server entry file for local development and Railway deployment
  */
 import { createServer } from 'http';
-import app from './app.js';
-import { config } from './config/environment.js';
-import logger from './utils/logger.js';
+import app from './app';
+import { config } from './config/environment';
+import logger from './utils/logger';
+
+// Server configuration - Port 4000
 
 /**
  * Start server with proper error handling for Railway deployment
@@ -22,37 +24,46 @@ server.on('error', (error: NodeJS.ErrnoException) => {
     logger.error(`Port ${PORT} is already in use`, error, { port: PORT });
     logger.info('Trying to find an available port...');
 
-    // Try to start on a different port
-    const fallbackPort = PORT + 1;
-    const fallbackServer = createServer(app);
+    // Try to find an available port starting from 3003
+    let fallbackPort = 3003;
+    const maxAttempts = 10;
+    let attempts = 0;
 
-    fallbackServer.on('error', (fallbackError: NodeJS.ErrnoException) => {
-      if (fallbackError.code === 'EADDRINUSE') {
-        logger.railwayError(
-          `Fallback port ${fallbackPort} is also in use`,
-          fallbackError,
-          {
-            originalPort: PORT,
-            fallbackPort,
-          }
-        );
-        process.exit(1);
-      } else {
-        logger.railwayError('Fallback server error', fallbackError, {
-          fallbackPort,
+    const tryPort = (port: number) => {
+      if (attempts >= maxAttempts) {
+        logger.railwayError('Could not find available port after multiple attempts', undefined, {
+          originalPort: PORT,
+          maxAttempts,
         });
         process.exit(1);
       }
-    });
 
-    fallbackServer.listen(fallbackPort, () => {
-      logger.railwayInfo(`Server started on fallback port ${fallbackPort}`, {
-      originalPort: PORT,
-      fallbackPort,
-      environment: config.NODE_ENV,
-      healthCheck: `http://localhost:${fallbackPort}/api/health`,
-    });
-    });
+      attempts++;
+      const fallbackServer = createServer(app);
+
+      fallbackServer.on('error', (fallbackError: NodeJS.ErrnoException) => {
+        if (fallbackError.code === 'EADDRINUSE') {
+          console.log(`Port ${port} is in use, trying ${port + 1}...`);
+          tryPort(port + 1);
+        } else {
+          logger.railwayError('Fallback server error', fallbackError, {
+            fallbackPort: port,
+          });
+          process.exit(1);
+        }
+      });
+
+      fallbackServer.listen(port, () => {
+        logger.railwayInfo(`Server started on fallback port ${port}`, {
+          originalPort: PORT,
+          fallbackPort: port,
+          environment: config.NODE_ENV,
+          healthCheck: `http://localhost:${port}/api/health`,
+        });
+      });
+    };
+
+    tryPort(fallbackPort);
   } else if (error.code === 'EADDRINUSE' && hasTriedFallback) {
     logger.railwayError('Both primary and fallback ports are in use', error, {
       primaryPort: PORT,

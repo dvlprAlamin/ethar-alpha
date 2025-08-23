@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import Card from '../components/Card';
 import { NETWORK_OPTIONS } from '../constants/networks';
+import { toast } from 'sonner';
 import {
   Search,
   Minus,
@@ -15,6 +16,7 @@ import {
   Plus,
   Edit2,
   Trash2,
+  TrendingUp,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -53,10 +55,24 @@ interface DepositAddress {
   updatedAt: string;
 }
 
+interface Trade {
+  _id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  amount: number;
+  status: 'active' | 'completed';
+  profitLoss: 'profit' | 'loss' | null;
+  returnPercentage: number;
+  finalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const Admin: React.FC = () => {
   const { user, token, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<
-    'balance' | 'withdrawals' | 'wallet'
+    'balance' | 'withdrawals' | 'wallet' | 'trades'
   >('balance');
   const [loading, setLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
@@ -108,6 +124,16 @@ const Admin: React.FC = () => {
     qrCode: null as File | null,
   });
   const [error, setError] = useState<string | null>(null);
+
+  // Trade Management State
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
+  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [tradeForm, setTradeForm] = useState({
+    profitLoss: '',
+    returnPercentage: '',
+    status: 'completed' as 'active' | 'completed',
+  });
 
   // Debug authentication state
   useEffect(() => {
@@ -246,6 +272,46 @@ const Admin: React.FC = () => {
     }
   };
 
+  const loadTrades = async () => {
+    try {
+      setError(null);
+
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/trades/all`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        return;
+      }
+
+      if (response.status === 403) {
+        setError('Access denied. Admin privileges required.');
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        setTrades(data.trades || []);
+      } else {
+        setError('Failed to load trades. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to load trades:', error);
+      setError('Network error. Please check your connection and try again.');
+    }
+  };
+
   // Load initial data
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -254,6 +320,7 @@ const Admin: React.FC = () => {
     loadUsers();
     loadWithdrawalRequests();
     loadDepositAddresses();
+    loadTrades();
   }, [user]);
 
   // Show loading while checking authentication
@@ -713,6 +780,7 @@ const Admin: React.FC = () => {
             { id: 'balance', label: 'User Balance', icon: DollarSign },
             { id: 'withdrawals', label: 'Withdrawals', icon: Minus },
             { id: 'wallet', label: 'Deposit Addresses', icon: Upload },
+            { id: 'trades', label: 'Trade Management', icon: TrendingUp },
           ].map((tab) => {
             const Icon = tab.icon;
             const pendingCount =
@@ -721,7 +789,9 @@ const Admin: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() =>
-                  setActiveTab(tab.id as 'balance' | 'withdrawals' | 'wallet')
+                  setActiveTab(
+                    tab.id as 'balance' | 'withdrawals' | 'wallet' | 'trades'
+                  )
                 }
                 className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors relative ${
                   activeTab === tab.id
@@ -740,6 +810,351 @@ const Admin: React.FC = () => {
             );
           })}
         </div>
+
+        {/* Trade Result Modal */}
+        {showTradeModal && selectedTrade && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4"
+            >
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Set Trade Result
+              </h3>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">User:</span>
+                  <span className="text-white">{selectedTrade.userName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Amount:</span>
+                  <span className="text-white">
+                    ${selectedTrade.amount.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Date:</span>
+                  <span className="text-white">
+                    {new Date(selectedTrade.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!selectedTrade || !tradeForm.returnPercentage) return;
+
+                  try {
+                    setLoading(true);
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(
+                      `${import.meta.env.VITE_SERVER_URL}/api/trades/${
+                        selectedTrade._id
+                      }/result`,
+                      {
+                        method: 'PUT',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          profitLoss: tradeForm.profitLoss,
+                          returnPercentage: parseFloat(
+                            tradeForm.returnPercentage
+                          ),
+                        }),
+                      }
+                    );
+
+                    if (response.ok) {
+                      toast.success('Trade result updated successfully');
+                      setShowTradeModal(false);
+                      setSelectedTrade(null);
+                      setTradeForm({
+                        profitLoss: 'profit',
+                        returnPercentage: '',
+                        status: 'completed',
+                      });
+                      loadTrades(); // Reload trades
+                    } else {
+                      const errorData = await response.json();
+                      toast.error(
+                        errorData.message || 'Failed to update trade result'
+                      );
+                    }
+                  } catch (error) {
+                    console.error('Error updating trade result:', error);
+                    toast.error('Failed to update trade result');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Result
+                  </label>
+                  <div className="flex space-x-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="profitLoss"
+                        value="profit"
+                        checked={tradeForm.profitLoss === 'profit'}
+                        onChange={(e) =>
+                          setTradeForm({
+                            ...tradeForm,
+                            profitLoss: e.target.value as 'profit' | 'loss',
+                          })
+                        }
+                        className="mr-2 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="text-green-400">Profit</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="profitLoss"
+                        value="loss"
+                        checked={tradeForm.profitLoss === 'loss'}
+                        onChange={(e) =>
+                          setTradeForm({
+                            ...tradeForm,
+                            profitLoss: e.target.value as 'profit' | 'loss',
+                          })
+                        }
+                        className="mr-2 text-red-600 focus:ring-red-500"
+                      />
+                      <span className="text-red-400">Loss</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                    Return Percentage
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={tradeForm.returnPercentage}
+                    onChange={(e) =>
+                      setTradeForm({
+                        ...tradeForm,
+                        returnPercentage: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter return percentage (e.g., 8.2 or -3.5)"
+                    required
+                  />
+                  <p className="text-slate-400 text-xs mt-1">
+                    Use positive values for profit, negative for loss
+                  </p>
+                </div>
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="submit"
+                    disabled={loading || !tradeForm.returnPercentage}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white py-2 rounded-lg font-medium transition-colors"
+                  >
+                    {loading ? 'Updating...' : 'Update Trade'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTradeModal(false);
+                      setSelectedTrade(null);
+                      setTradeForm({
+                        profitLoss: 'profit',
+                        returnPercentage: '',
+                        status: 'completed',
+                      });
+                    }}
+                    className="px-6 bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Trade Management */}
+        {activeTab === 'trades' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <Card className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold text-white mb-1">
+                    Trade Management
+                  </h2>
+                  <p className="text-slate-400 text-sm">
+                    Manage user trades and set profit/loss outcomes
+                  </p>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-slate-750">
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                        User
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                        Amount
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                        Status
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                        Profit/Loss
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                        Return (%)
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                        Date
+                      </th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trades.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="py-8 text-center text-slate-400"
+                        >
+                          No trades found
+                        </td>
+                      </tr>
+                    ) : (
+                      trades.map((trade) => (
+                        <tr
+                          key={trade._id}
+                          className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
+                        >
+                          {/* User */}
+                          <td className="py-4 px-4">
+                            <div>
+                              <div className="text-white text-sm font-medium">
+                                {trade.userName || 'Unknown User'}
+                              </div>
+                              <div className="text-slate-400 text-xs">
+                                {trade.userEmail || 'No email'}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Amount */}
+                          <td className="py-4 px-4">
+                            <span className="text-white text-sm font-medium">
+                              ${trade.amount.toFixed(2)}
+                            </span>
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-4 px-4">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                trade.status === 'active'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-green-100 text-green-800'
+                              }`}
+                            >
+                              {trade.status}
+                            </span>
+                          </td>
+
+                          {/* Profit/Loss */}
+                          <td className="py-4 px-4">
+                            {trade.status === 'completed' ? (
+                              <span
+                                className={`text-sm font-medium ${
+                                  trade.profitLoss === 'profit'
+                                    ? 'text-green-400'
+                                    : 'text-red-400'
+                                }`}
+                              >
+                                {trade.profitLoss === 'profit'
+                                  ? 'Profit'
+                                  : 'Loss'}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-sm">-</span>
+                            )}
+                          </td>
+
+                          {/* Return % */}
+                          <td className="py-4 px-4">
+                            {trade.status === 'completed' &&
+                            trade.returnPercentage ? (
+                              <span
+                                className={`text-sm font-medium ${
+                                  trade.returnPercentage > 0
+                                    ? 'text-green-400'
+                                    : 'text-red-400'
+                                }`}
+                              >
+                                {trade.returnPercentage > 0 ? '+' : ''}
+                                {trade.returnPercentage}%
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-sm">-</span>
+                            )}
+                          </td>
+
+                          {/* Date */}
+                          <td className="py-4 px-4">
+                            <span className="text-slate-400 text-sm">
+                              {new Date(trade.createdAt).toLocaleDateString()}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-4 px-4">
+                            {trade.status === 'active' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedTrade(trade);
+                                  setTradeForm({
+                                    profitLoss: 'profit',
+                                    returnPercentage: '',
+                                    status: 'completed',
+                                  });
+                                  setShowTradeModal(true);
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                              >
+                                Set Result
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </motion.div>
+        )}
 
         {/* User Balance Management */}
         {activeTab === 'balance' && (
@@ -791,10 +1206,10 @@ const Admin: React.FC = () => {
                         <td className="py-3 px-4">
                           <div>
                             <div className="text-white font-medium">
-                              {user.name}
+                              {user.name || 'Unknown User'}
                             </div>
                             <div className="text-slate-400 text-sm">
-                              {user.email}
+                              {user.email || 'No email'}
                             </div>
                           </div>
                         </td>
@@ -850,10 +1265,10 @@ const Admin: React.FC = () => {
                         </div>
                         <div>
                           <div className="text-white font-medium">
-                            {request.userName}
+                            {request.userName || 'Unknown User'}
                           </div>
                           <div className="text-slate-400 text-sm">
-                            {request.userEmail}
+                            {request.userEmail || 'No email'}
                           </div>
                         </div>
                         <div className="text-right">

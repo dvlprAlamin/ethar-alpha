@@ -2,30 +2,19 @@
  * Server entry file for local development and Railway deployment
  */
 import { createServer } from 'http';
-import { Server as SocketIOServer } from 'socket.io';
-import app from './app.js';
-import WebSocketServer from './websocket.js';
-import { config } from './config/environment.js';
-import logger from './utils/logger.js';
+import app from './app';
+import { config } from './config/environment';
+import logger from './utils/logger';
+
+// Server configuration - Port 4000
 
 /**
  * Start server with proper error handling for Railway deployment
  */
 const PORT = config.PORT;
-const WS_PORT = config.WS_PORT;
 
 // Create HTTP server with error handling
 const server = createServer(app);
-
-// Initialize WebSocket server with error handling
-let wsServer: WebSocketServer | null = null;
-try {
-  wsServer = new WebSocketServer(server);
-  logger.wsInfo('WebSocket server initialized successfully');
-} catch (error) {
-  logger.wsError('WebSocket server initialization failed', error as Error);
-  logger.warn('Server will continue without WebSocket functionality');
-}
 
 // Server error handling
 let hasTriedFallback = false;
@@ -35,37 +24,46 @@ server.on('error', (error: NodeJS.ErrnoException) => {
     logger.error(`Port ${PORT} is already in use`, error, { port: PORT });
     logger.info('Trying to find an available port...');
 
-    // Try to start on a different port
-    const fallbackPort = PORT + 1;
-    const fallbackServer = createServer(app);
+    // Try to find an available port starting from 3003
+    let fallbackPort = 3003;
+    const maxAttempts = 10;
+    let attempts = 0;
 
-    fallbackServer.on('error', (fallbackError: NodeJS.ErrnoException) => {
-      if (fallbackError.code === 'EADDRINUSE') {
-        logger.railwayError(
-          `Fallback port ${fallbackPort} is also in use`,
-          fallbackError,
-          {
-            originalPort: PORT,
-            fallbackPort,
-          }
-        );
-        process.exit(1);
-      } else {
-        logger.railwayError('Fallback server error', fallbackError, {
-          fallbackPort,
+    const tryPort = (port: number) => {
+      if (attempts >= maxAttempts) {
+        logger.railwayError('Could not find available port after multiple attempts', undefined, {
+          originalPort: PORT,
+          maxAttempts,
         });
         process.exit(1);
       }
-    });
 
-    fallbackServer.listen(fallbackPort, () => {
-      logger.railwayInfo(`Server started on fallback port ${fallbackPort}`, {
-        originalPort: PORT,
-        fallbackPort,
-        environment: config.NODE_ENV,
-        healthCheck: `http://localhost:${fallbackPort}/api/health`,
+      attempts++;
+      const fallbackServer = createServer(app);
+
+      fallbackServer.on('error', (fallbackError: NodeJS.ErrnoException) => {
+        if (fallbackError.code === 'EADDRINUSE') {
+          console.log(`Port ${port} is in use, trying ${port + 1}...`);
+          tryPort(port + 1);
+        } else {
+          logger.railwayError('Fallback server error', fallbackError, {
+            fallbackPort: port,
+          });
+          process.exit(1);
+        }
       });
-    });
+
+      fallbackServer.listen(port, () => {
+        logger.railwayInfo(`Server started on fallback port ${port}`, {
+          originalPort: PORT,
+          fallbackPort: port,
+          environment: config.NODE_ENV,
+          healthCheck: `http://localhost:${port}/api/health`,
+        });
+      });
+    };
+
+    tryPort(fallbackPort);
   } else if (error.code === 'EADDRINUSE' && hasTriedFallback) {
     logger.railwayError('Both primary and fallback ports are in use', error, {
       primaryPort: PORT,
@@ -86,7 +84,6 @@ server.listen(PORT, () => {
     serverUrl: config.SERVER_URL,
     clientUrl: config.CLIENT_URL,
     healthCheck: `http://localhost:${PORT}/api/health`,
-    wsPort: WS_PORT,
   });
 
   if (config.NODE_ENV === 'production') {
@@ -113,16 +110,6 @@ const gracefulShutdown = (signal: string) => {
     });
     process.exit(1);
   }, 10000); // 10 seconds timeout
-
-  // Close WebSocket server
-  if (wsServer) {
-    try {
-      wsServer.disconnect();
-      logger.wsInfo('WebSocket server disconnected successfully');
-    } catch (error) {
-      logger.wsError('Error disconnecting WebSocket server', error as Error);
-    }
-  }
 
   // Close HTTP server
   server.close((error) => {
@@ -164,7 +151,7 @@ process.on('unhandledRejection', (reason, promise) => {
   gracefulShutdown('UNHANDLED_REJECTION');
 });
 
-// Export WebSocket server instance for use in other modules
-export { wsServer };
+
 
 export default app; // Restart trigger
+// restart

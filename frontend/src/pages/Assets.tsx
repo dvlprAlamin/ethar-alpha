@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Wallet, Download, Upload, History, ArrowUpRight, ArrowDownLeft, Building, ShoppingCart, Briefcase, CreditCard, TrendingUp } from 'lucide-react';
 import Card from '../components/Card';
 
@@ -13,6 +14,8 @@ interface Transaction {
 }
 
 const Assets: React.FC = () => {
+  const navigate = useNavigate();
+  
   // Static data for demonstration
   const totalAssets = 52345.89;
   const availableBalance = 12345.89;
@@ -115,18 +118,24 @@ const Assets: React.FC = () => {
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-4">
           <button 
+            onClick={() => navigate('/deposit')}
             className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-xl p-4 flex items-center justify-center space-x-2 transition-colors duration-200"
-                
           >
-            <Download className="w-5 h-5" />
+            <Download className="w-5 h-5 hidden sm:block" />
             <span className="font-medium">Deposit</span>
           </button>
-          <button className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-xl p-4 flex items-center justify-center space-x-2 transition-colors duration-200">
-            <Upload className="w-5 h-5" />
+          <button 
+            onClick={() => navigate('/withdraw')}
+            className="bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white rounded-xl p-4 flex items-center justify-center space-x-2 transition-colors duration-200"
+          >
+            <Upload className="w-5 h-5 hidden sm:block" />
             <span className="font-medium">Withdraw</span>
           </button>
-          <button className="bg-slate-700 hover:bg-slate-600 text-white rounded-xl p-4 flex items-center justify-center space-x-2 transition-colors duration-200">
-            <History className="w-5 h-5" />
+          <button 
+            onClick={() => navigate('/history')}
+            className="bg-slate-700 hover:bg-slate-600 text-white rounded-xl p-4 flex items-center justify-center space-x-2 transition-colors duration-200"
+          >
+            <History className="w-5 h-5 hidden sm:block" />
             <span className="font-medium">History</span>
           </button>
         </div>

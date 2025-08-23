@@ -6,7 +6,6 @@ import {
   Navigate,
 } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import { useWebSocketStore } from './store/websocketStore';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -15,12 +14,17 @@ import Landing from './pages/Landing';
 import News from './pages/News';
 import Trade from './pages/Trade';
 import Assets from './pages/Assets';
+import History from './pages/History';
+import Deposit from './pages/Deposit';
+import Withdraw from './pages/Withdraw';
+import Support from './pages/Support';
 // import Admin from './pages/Admin';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Loader2 } from 'lucide-react';
 import NotFound from './pages/NotFound';
 import Admin from './pages/Admin';
 import Whitepaper from './pages/Whitepaper';
+import { Toaster } from 'sonner';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -79,7 +83,6 @@ const LoadingScreen: React.FC = () => {
 
 const App: React.FC = () => {
   const { user, isAuthenticated, refreshUser, loading } = useAuthStore();
-  const { connect, disconnect } = useWebSocketStore();
 
   useEffect(() => {
     // Try to refresh user data on app start
@@ -89,19 +92,7 @@ const App: React.FC = () => {
     }
   }, [user, refreshUser]);
 
-  useEffect(() => {
-    // Connect to WebSocket when user is authenticated
-    if (isAuthenticated && user) {
-      connect();
-    } else {
-      disconnect();
-    }
 
-    // Cleanup on unmount
-    return () => {
-      disconnect();
-    };
-  }, [isAuthenticated, user, connect, disconnect]);
 
   // Show loading screen while checking authentication
   if (loading) {
@@ -112,6 +103,12 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <Router>
         <div className="App">
+          <Toaster 
+            position="top-right" 
+            richColors 
+            closeButton 
+            duration={4000}
+          />
           <Routes>
             {/* Public Routes */}
             <Route
@@ -192,6 +189,50 @@ const App: React.FC = () => {
                 <ProtectedRoute>
                   <Layout>
                     <Whitepaper />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <History />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/deposit"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Deposit />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/withdraw"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Withdraw />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/support"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Support />
                   </Layout>
                 </ProtectedRoute>
               }

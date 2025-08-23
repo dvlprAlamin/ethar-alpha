@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { TrendingUp, TrendingDown, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { toast } from 'sonner';
 
 // Static data for demonstration
 const priceData = [
@@ -36,8 +37,8 @@ const Trade: React.FC = () => {
   const [error, setError] = useState('');
   const [currentPrice, setCurrentPrice] = useState(105760);
   const [priceChange, setPriceChange] = useState(1.06);
-  
-  const { user, updateBalance } = useAuthStore();
+
+  const { user, token, updateBalance } = useAuthStore();
 
   // Simulate real-time price updates
   useEffect(() => {
@@ -65,25 +66,53 @@ const Trade: React.FC = () => {
     }).format(num);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     setError('');
     const tradeAmount = parseFloat(amount);
-    
+
     if (!tradeAmount || tradeAmount <= 0) {
       setError('Please enter a valid amount');
       return;
     }
-    
+
     if (!user?.balances?.USD || user.balances.USD < tradeAmount) {
       setError('Insufficient balance');
       return;
     }
-    
-    // Start trade and reduce balance
-    updateBalance('USD', user.balances.USD - tradeAmount);
-    setTradeStatus('active');
+
+    try {
+      // const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/trades/create`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ amount: tradeAmount }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create trade');
+      }
+
+      // Update local balance and start trade
+      updateBalance('USD', user.balances.USD - tradeAmount);
+      setTradeStatus('active');
+      toast.success('Trade started successfully!');
+    } catch (error) {
+      console.error('Trade creation error:', error);
+      setError(
+        error instanceof Error ? error.message : 'Failed to create trade'
+      );
+      toast.error('Failed to start trade');
+    }
   };
-  
+
   const handleExitTrade = () => {
     setTradeStatus('completed');
     setAmount('');
@@ -260,9 +289,13 @@ const Trade: React.FC = () => {
                   <div className="mt-2 pt-2 border-t border-slate-700">
                     <div className="flex justify-between items-center">
                       <span className="text-slate-400">Trade Status:</span>
-                      <span className={`font-semibold ${
-                        tradeStatus === 'active' ? 'text-yellow-400' : 'text-blue-400'
-                      }`}>
+                      <span
+                        className={`font-semibold ${
+                          tradeStatus === 'active'
+                            ? 'text-yellow-400'
+                            : 'text-blue-400'
+                        }`}
+                      >
                         {tradeStatus === 'active' ? 'Active' : 'Completed'}
                       </span>
                     </div>
@@ -284,11 +317,15 @@ const Trade: React.FC = () => {
                   disabled={tradeStatus === 'active'}
                 />
                 <div className="flex justify-between mt-2 text-xs text-slate-400">
-                  <span>Available: {formatPrice(user?.balances?.USD || 0)}</span>
-                  <button 
+                  <span>
+                    Available: {formatPrice(user?.balances?.USD || 0)}
+                  </span>
+                  <button
                     className="text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={tradeStatus === 'active'}
-                    onClick={() => setAmount((user?.balances?.USD || 0).toString())}
+                    onClick={() =>
+                      setAmount((user?.balances?.USD || 0).toString())
+                    }
                   >
                     Max
                   </button>

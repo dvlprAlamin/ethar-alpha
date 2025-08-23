@@ -20,7 +20,48 @@ import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import marketRoutes from './routes/market';
 import marketDataRoutes from './routes/marketData';
+import depositAddressRoutes from './routes/depositAddresses';
+import depositsRoutes from './routes/deposits';
+import withdrawalRoutes from './routes/withdrawals';
+import tradeRoutes from './routes/trades';
 import { schedulerService } from './services/schedulerService';
+
+const app: express.Application = express();
+
+// CORS configuration
+const corsOptions = {
+  origin: config.CLIENT_URL,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+logger.info('CORS configured', { origin: config.CLIENT_URL });
+
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Register API routes (available even if database connection fails)
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/admin/deposit-addresses', depositAddressRoutes);
+app.use('/api/deposits', depositsRoutes);
+app.use('/api/withdrawals', withdrawalRoutes);
+app.use('/api/trades', tradeRoutes);
+app.use('/api/market', marketRoutes);
+app.use('/api', marketDataRoutes);
+
+// Serve QR code images statically (backward compatibility)
+app.use(
+  '/qr-codes',
+  express.static(path.join(__dirname, 'uploads', 'qr-codes'))
+);
+
+// Serve all uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+console.log('✅ API routes registered successfully');
 
 // Initialize database connection with retry logic
 logger.dbInfo('Initializing database connection', {
@@ -49,30 +90,6 @@ connectDB(config.MONGODB_URI)
     console.error('❌ Database connection failed:', error);
     console.log('🔄 Server will continue and attempt to reconnect...');
   });
-
-const app: express.Application = express();
-
-// CORS configuration
-const corsOptions = {
-  origin: config.CLIENT_URL,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-logger.info('CORS configured', { origin: config.CLIENT_URL });
-
-app.use(cors({}));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-/**
- * API Routes
- */
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/market', marketRoutes);
-app.use('/api', marketDataRoutes);
 
 /**
  * Enhanced health check endpoint for Railway deployment monitoring

@@ -1,13 +1,15 @@
 import express from 'express';
 import { authenticate, requireAdmin } from '../middleware/auth';
 import { User, AdminConfig } from '../models';
+import { Withdrawal } from '../models/Withdrawal';
 import {
   UserBalanceInfo,
   BalanceAdjustmentRequest,
   WalletConfig,
   WalletAddressUpdate,
-  ApiResponse
+  ApiResponse,
 } from '../types';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
@@ -62,14 +64,14 @@ router.get('/users', async (req, res) => {
       .limit(Number(limit));
 
     // Format users with balances for admin panel
-    const formattedUsers = users.map(user => ({
+    const formattedUsers = users.map((user) => ({
       id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
       isActive: user.isActive,
       createdAt: user.createdAt,
-      balances: user.balances || { BTC: 0, ETH: 0, TRC20: 0, USD: 0 }
+      balances: user.balances || { BTC: 0, ETH: 0, TRC20: 0, USD: 0 },
     }));
 
     const total = await User.countDocuments(filter);
@@ -146,7 +148,7 @@ router.get('/users/:userId/balances', async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId).select('balances email name');
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -156,8 +158,8 @@ router.get('/users/:userId/balances', async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        balances: user.balances || { BTC: 0, ETH: 0, TRC20: 0, USD: 0 }
-      }
+        balances: user.balances || { BTC: 0, ETH: 0, TRC20: 0, USD: 0 },
+      },
     });
   } catch (error) {
     console.error('Get user balances error:', error);
@@ -169,22 +171,18 @@ router.get('/users/:userId/balances', async (req, res) => {
 router.post('/users/:userId/balance-adjustment', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { currency, amount, reason, type } = req.body;
-    
+    const { currency, amount, type } = req.body;
+
     if (!['BTC', 'ETH', 'TRC20', 'USD'].includes(currency)) {
       return res.status(400).json({ error: 'Invalid currency' });
     }
-    
+
     if (!['add', 'reduce'].includes(type)) {
       return res.status(400).json({ error: 'Invalid adjustment type' });
     }
-    
+
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Invalid amount' });
-    }
-    
-    if (!reason || reason.trim().length === 0) {
-      return res.status(400).json({ error: 'Reason is required' });
     }
 
     const user = await User.findById(userId);
@@ -202,7 +200,9 @@ router.post('/users/:userId/balance-adjustment', async (req, res) => {
     const newBalance = currentBalance + adjustmentAmount;
 
     if (newBalance < 0) {
-      return res.status(400).json({ error: 'Insufficient balance for reduction' });
+      return res
+        .status(400)
+        .json({ error: 'Insufficient balance for reduction' });
     }
 
     // Update user balance
@@ -217,8 +217,7 @@ router.post('/users/:userId/balance-adjustment', async (req, res) => {
       amount: adjustmentAmount,
       previousBalance: currentBalance,
       newBalance,
-      reason,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     // For now, we'll just log to console. In production, save to database
@@ -230,15 +229,14 @@ router.post('/users/:userId/balance-adjustment', async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        balances: user.balances
+        balances: user.balances,
       },
       adjustment: {
         currency,
         amount: adjustmentAmount,
         previousBalance: currentBalance,
         newBalance,
-        reason
-      }
+      },
     });
   } catch (error) {
     console.error('Balance adjustment error:', error);
@@ -255,14 +253,14 @@ router.get('/wallet-config', async (req, res) => {
         BTC: '',
         ETH: '',
         TRC20: '',
-        BNB: ''
+        BNB: '',
       },
       qrCodes: config.qrCodes || {
         BTC: null,
         ETH: null,
         TRC20: null,
-        BNB: null
-      }
+        BNB: null,
+      },
     });
   } catch (error) {
     console.error('Wallet config fetch error:', error);
@@ -274,20 +272,20 @@ router.get('/wallet-config', async (req, res) => {
 router.put('/wallet-config/addresses', async (req, res) => {
   try {
     const { BTC, ETH, TRC20, BNB } = req.body;
-    
+
     const currentConfig = await AdminConfig.getConfig();
     const updatedConfig = await AdminConfig.updateConfig({
       depositAddresses: {
         BTC: BTC || currentConfig.depositAddresses?.BTC || '',
         ETH: ETH || currentConfig.depositAddresses?.ETH || '',
         TRC20: TRC20 || currentConfig.depositAddresses?.TRC20 || '',
-        BNB: BNB || currentConfig.depositAddresses?.BNB || ''
-      }
+        BNB: BNB || currentConfig.depositAddresses?.BNB || '',
+      },
     });
 
     res.json({
       message: 'Wallet addresses updated successfully',
-      depositAddresses: updatedConfig.depositAddresses
+      depositAddresses: updatedConfig.depositAddresses,
     });
   } catch (error) {
     console.error('Wallet addresses update error:', error);
@@ -299,32 +297,32 @@ router.put('/wallet-config/addresses', async (req, res) => {
 router.delete('/wallet-config/addresses/:currency', async (req, res) => {
   try {
     const { currency } = req.params;
-    
+
     if (!['BTC', 'ETH', 'TRC20', 'BNB'].includes(currency)) {
       return res.status(400).json({ error: 'Invalid currency' });
     }
 
     const config = await AdminConfig.getConfig();
-    
+
     // Use $unset to properly remove the fields
     const updateQuery = {
       $unset: {
         [`depositAddresses.${currency}`]: 1,
-        [`qrCodes.${currency}`]: 1
-      }
+        [`qrCodes.${currency}`]: 1,
+      },
     };
-    
+
     await AdminConfig.findByIdAndUpdate(config._id, updateQuery);
-    
+
     // Get updated config
     const updatedConfig = await AdminConfig.getConfig();
-    
-    res.json({ 
+
+    res.json({
       message: `${currency} wallet configuration deleted successfully`,
       config: {
         depositAddresses: updatedConfig.depositAddresses,
-        qrCodes: updatedConfig.qrCodes
-      }
+        qrCodes: updatedConfig.qrCodes,
+      },
     });
   } catch (error) {
     console.error('Error deleting wallet config:', error);
@@ -337,18 +335,20 @@ router.post('/wallet-config/qr-upload/:currency', async (req, res) => {
   try {
     const { currency } = req.params;
     const { qrCodeBase64 } = req.body;
-    
+
     if (!['BTC', 'ETH', 'TRC20', 'BNB'].includes(currency)) {
       return res.status(400).json({ error: 'Invalid currency' });
     }
-    
+
     if (!qrCodeBase64) {
       return res.status(400).json({ error: 'No QR code data provided' });
     }
 
     // Validate base64 format (should start with data:image/)
     if (!qrCodeBase64.startsWith('data:image/')) {
-      return res.status(400).json({ error: 'Invalid QR code format. Must be a base64 image.' });
+      return res
+        .status(400)
+        .json({ error: 'Invalid QR code format. Must be a base64 image.' });
     }
 
     // Update config with QR code base64 data
@@ -361,7 +361,7 @@ router.post('/wallet-config/qr-upload/:currency', async (req, res) => {
     res.json({
       message: 'QR code uploaded successfully',
       currency,
-      qrCodeData: qrCodes[currency]
+      qrCodeData: qrCodes[currency],
     });
   } catch (error) {
     console.error('QR code upload error:', error);
@@ -375,61 +375,47 @@ router.get('/withdrawal-requests', async (req, res) => {
     const { page = 1, limit = 20, status = 'pending' } = req.query;
     const skip = (Number(page) - 1) * Number(limit);
 
-    // Mock withdrawal requests data for now
-    // In production, this would fetch from a WithdrawalRequest model
-    const mockWithdrawals = [
-      {
-        id: '1',
-        userId: '507f1f77bcf86cd799439011',
-        userEmail: 'user1@example.com',
-        userName: 'John Doe',
-        currency: 'BTC',
-        amount: 0.5,
-        address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-        status: 'pending',
-        requestedAt: new Date('2024-01-15T10:30:00Z'),
-        fee: 0.0005
-      },
-      {
-        id: '2',
-        userId: '507f1f77bcf86cd799439012',
-        userEmail: 'user2@example.com',
-        userName: 'Jane Smith',
-        currency: 'ETH',
-        amount: 2.5,
-        address: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b',
-        status: 'pending',
-        requestedAt: new Date('2024-01-15T11:45:00Z'),
-        fee: 0.01
-      },
-      {
-        id: '3',
-        userId: '507f1f77bcf86cd799439013',
-        userEmail: 'user3@example.com',
-        userName: 'Bob Johnson',
-        currency: 'TRC20',
-        amount: 1000,
-        address: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE',
-        status: 'pending',
-        requestedAt: new Date('2024-01-15T12:15:00Z'),
-        fee: 1
-      }
-    ];
+    // Build query based on status filter
+    const query: any = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
 
-    const filteredRequests = mockWithdrawals.filter(req => 
-      status === 'all' || req.status === status
-    );
+    // Fetch withdrawal requests from database
+    const withdrawalRequests = await Withdrawal.find(query)
+      .populate('userId', 'name email')
+      .sort({ requestedAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
 
-    const paginatedRequests = filteredRequests.slice(skip, skip + Number(limit));
+    const total = await Withdrawal.countDocuments(query);
+
+    // Format the response to match frontend expectations
+    const formattedRequests = withdrawalRequests.map((withdrawal) => ({
+      id: withdrawal._id.toString(),
+      userId: withdrawal.userId._id.toString(),
+      userEmail: (withdrawal.userId as any).email,
+      userName: (withdrawal.userId as any).name,
+      currency: withdrawal.currency,
+      amount: withdrawal.amount,
+      address: withdrawal.address,
+      network: withdrawal.network,
+      status: withdrawal.status,
+      requestedAt: withdrawal.requestedAt,
+      processedAt: withdrawal.processedAt,
+      fee: withdrawal.fee,
+      notes: withdrawal.notes,
+      rejectionReason: withdrawal.rejectionReason,
+    }));
 
     res.json({
-      withdrawalRequests: paginatedRequests,
+      withdrawalRequests: formattedRequests,
       pagination: {
         page: Number(page),
         limit: Number(limit),
-        total: filteredRequests.length,
-        pages: Math.ceil(filteredRequests.length / Number(limit))
-      }
+        total,
+        pages: Math.ceil(total / Number(limit)),
+      },
     });
   } catch (error) {
     console.error('Withdrawal requests fetch error:', error);
@@ -443,14 +429,30 @@ router.post('/withdrawal-requests/:requestId/approve', async (req, res) => {
     const { requestId } = req.params;
     const { notes } = req.body;
 
-    // In production, this would:
-    // 1. Find the withdrawal request
-    // 2. Update its status to 'approved'
-    // 3. Process the actual withdrawal
-    // 4. Update user balance
-    // 5. Log the transaction
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
 
-    console.log(`Withdrawal request ${requestId} approved by admin ${req.user.id}`);
+    // Find the withdrawal request
+    const withdrawal = await Withdrawal.findById(requestId);
+    if (!withdrawal) {
+      return res.status(404).json({ error: 'Withdrawal request not found' });
+    }
+
+    if (withdrawal.status !== 'pending') {
+      return res.status(400).json({ error: 'Withdrawal request is not pending' });
+    }
+
+    // Update withdrawal status
+    withdrawal.status = 'approved';
+    withdrawal.processedAt = new Date();
+    withdrawal.processedBy = new mongoose.Types.ObjectId(req.user.id);
+    withdrawal.notes = notes;
+    await withdrawal.save();
+
+    console.log(
+      `Withdrawal request ${requestId} approved by admin ${req.user.id}`
+    );
     console.log('Admin notes:', notes);
 
     res.json({
@@ -458,8 +460,8 @@ router.post('/withdrawal-requests/:requestId/approve', async (req, res) => {
       requestId,
       status: 'approved',
       approvedBy: req.user.id,
-      approvedAt: new Date(),
-      notes
+      approvedAt: withdrawal.processedAt,
+      notes,
     });
   } catch (error) {
     console.error('Withdrawal approval error:', error);
@@ -477,14 +479,42 @@ router.post('/withdrawal-requests/:requestId/reject', async (req, res) => {
       return res.status(400).json({ error: 'Rejection reason is required' });
     }
 
-    // In production, this would:
-    // 1. Find the withdrawal request
-    // 2. Update its status to 'rejected'
-    // 3. Return funds to user balance if needed
-    // 4. Log the transaction
-    // 5. Notify the user
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({ error: 'Invalid request ID' });
+    }
 
-    console.log(`Withdrawal request ${requestId} rejected by admin ${req.user.id}`);
+    // Find the withdrawal request
+    const withdrawal = await Withdrawal.findById(requestId);
+    if (!withdrawal) {
+      return res.status(404).json({ error: 'Withdrawal request not found' });
+    }
+
+    if (withdrawal.status !== 'pending') {
+      return res.status(400).json({ error: 'Withdrawal request is not pending' });
+    }
+
+    // Find the user to restore balance
+    const user = await User.findById(withdrawal.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Restore user balance (return the amount + fee)
+    const totalAmount = withdrawal.amount + withdrawal.fee;
+    const currency = withdrawal.currency as keyof typeof user.balances;
+    user.balances[currency] = (user.balances[currency] || 0) + totalAmount;
+    await user.save();
+
+    // Update withdrawal status
+    withdrawal.status = 'rejected';
+    withdrawal.processedAt = new Date();
+    withdrawal.processedBy = new mongoose.Types.ObjectId(req.user.id);
+    withdrawal.rejectionReason = reason;
+    await withdrawal.save();
+
+    console.log(
+      `Withdrawal request ${requestId} rejected by admin ${req.user.id}`
+    );
     console.log('Rejection reason:', reason);
 
     res.json({
@@ -492,8 +522,8 @@ router.post('/withdrawal-requests/:requestId/reject', async (req, res) => {
       requestId,
       status: 'rejected',
       rejectedBy: req.user.id,
-      rejectedAt: new Date(),
-      reason
+      rejectedAt: withdrawal.processedAt,
+      reason,
     });
   } catch (error) {
     console.error('Withdrawal rejection error:', error);

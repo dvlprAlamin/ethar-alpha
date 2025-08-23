@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, TrendingUp, TrendingDown, ArrowUpRight } from 'lucide-react';
+import { Bell, TrendingUp, ArrowUpRight } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
 
@@ -39,8 +39,12 @@ interface WithdrawalTransaction {
 }
 
 const History: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'trade' | 'staking' | 'withdraw'>('trade');
-  const [withdrawalHistory, setWithdrawalHistory] = useState<WithdrawalTransaction[]>([]);
+  const [activeTab, setActiveTab] = useState<'trade' | 'staking' | 'withdraw'>(
+    'trade'
+  );
+  const [withdrawalHistory, setWithdrawalHistory] = useState<
+    WithdrawalTransaction[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { user, token } = useAuthStore();
@@ -55,7 +59,7 @@ const History: React.FC = () => {
       price: '$68,500.23',
       date: '2023-10-26',
       time: '14:30',
-      status: 'completed'
+      status: 'completed',
     },
     {
       id: '2',
@@ -65,7 +69,7 @@ const History: React.FC = () => {
       price: '$3,400.15',
       date: '2023-10-25',
       time: '09:15',
-      status: 'completed'
+      status: 'completed',
     },
     {
       id: '3',
@@ -75,7 +79,7 @@ const History: React.FC = () => {
       price: '$120.78',
       date: '2023-10-24',
       time: '18:45',
-      status: 'pending'
+      status: 'pending',
     },
     {
       id: '4',
@@ -85,25 +89,30 @@ const History: React.FC = () => {
       price: '$0.45',
       date: '2023-10-23',
       time: '11:20',
-      status: 'failed'
-    }
+      status: 'failed',
+    },
   ];
 
   // Fetch withdrawal history
   const fetchWithdrawalHistory = async () => {
     if (!token) return;
-    
+
     try {
       setLoading(true);
       setError('');
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/withdrawals`, {
-        headers: {
-          Authorization: `Bearer ${token}`
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/withdrawals`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
       setWithdrawalHistory(response.data.data?.withdrawals || []);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch withdrawal history');
+      setError(
+        err.response?.data?.message || 'Failed to fetch withdrawal history'
+      );
     } finally {
       setLoading(false);
     }
@@ -125,7 +134,7 @@ const History: React.FC = () => {
       apy: '5.2%',
       date: '2023-10-20',
       time: '10:30',
-      status: 'active'
+      status: 'active',
     },
     {
       id: '2',
@@ -135,8 +144,8 @@ const History: React.FC = () => {
       apy: '7.8%',
       date: '2023-10-18',
       time: '16:45',
-      status: 'active'
-    }
+      status: 'active',
+    },
   ];
 
   const getStatusColor = (status: string) => {
@@ -258,167 +267,233 @@ const History: React.FC = () => {
 
         {/* Transaction Cards */}
         <div className="space-y-4">
-          {activeTab === 'trade' ? (
-            tradeHistory.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:bg-slate-700 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(transaction.type)}`}>
-                      {getTypeIcon(transaction.type)}
-                      <span className="capitalize">{transaction.type}</span>
-                    </div>
-                    <div className={`px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(transaction.status)}`}>
-                      {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-white">{transaction.pair}</h3>
-                  <span className="text-lg font-semibold text-white">{transaction.amount}</span>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-400 mb-1">Price:</p>
-                    <p className="text-white font-medium">{transaction.price}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Date:</p>
-                    <p className="text-white font-medium">{transaction.date}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Time:</p>
-                    <p className="text-white font-medium">{transaction.time}</p>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : activeTab === 'staking' ? (
-            stakingHistory.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:bg-slate-700 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(transaction.type)}`}>
-                      {getTypeIcon(transaction.type)}
-                      <span className="capitalize">{transaction.type}</span>
-                    </div>
-                    <div className={`px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(transaction.status)}`}>
-                      {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+          {activeTab === 'trade'
+            ? tradeHistory.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:bg-slate-700 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(
+                          transaction.type
+                        )}`}
+                      >
+                        {getTypeIcon(transaction.type)}
+                        <span className="capitalize">{transaction.type}</span>
+                      </div>
+                      <div
+                        className={`px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(
+                          transaction.status
+                        )}`}
+                      >
+                        {transaction.status.charAt(0).toUpperCase() +
+                          transaction.status.slice(1)}
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-white">{transaction.asset} Staking</h3>
-                  <span className="text-lg font-semibold text-white">{transaction.amount}</span>
-                </div>
-                
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-400 mb-1">APY:</p>
-                    <p className="text-green-400 font-medium">{transaction.apy}</p>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-white">
+                      {transaction.pair}
+                    </h3>
+                    <span className="text-lg font-semibold text-white">
+                      {transaction.amount}
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Date:</p>
-                    <p className="text-white font-medium">{transaction.date}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Time:</p>
-                    <p className="text-white font-medium">{transaction.time}</p>
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : activeTab === 'withdraw' ? (
-            withdrawalHistory.map((withdrawal) => (
-              <div
-                key={withdrawal._id}
-                className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:bg-slate-700 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor('withdraw')}`}>
-                      {getTypeIcon('withdraw')}
-                      <span>Withdraw</span>
-                    </div>
-                    <div className={`px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(withdrawal.status)}`}>
-                      {withdrawal.status.charAt(0).toUpperCase() + withdrawal.status.slice(1)}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-white">{withdrawal.currency} Withdrawal</h3>
-                  <span className="text-lg font-semibold text-white">{withdrawal.amount} {withdrawal.currency}</span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm mb-3">
-                  <div>
-                    <p className="text-slate-400 mb-1">Network:</p>
-                    <p className="text-white font-medium">{withdrawal.network}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-400 mb-1">Fee:</p>
-                    <p className="text-white font-medium">{withdrawal.fee} {withdrawal.currency}</p>
-                  </div>
-                </div>
-                
-                <div className="mb-3">
-                  <p className="text-slate-400 mb-1">Address:</p>
-                  <p className="text-white font-medium text-xs break-all">{withdrawal.address}</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-slate-400 mb-1">Requested:</p>
-                    <p className="text-white font-medium">{formatDate(withdrawal.requestedAt)}</p>
-                    <p className="text-slate-400 text-xs">{formatTime(withdrawal.requestedAt)}</p>
-                  </div>
-                  {withdrawal.processedAt && (
+
+                  <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-slate-400 mb-1">Processed:</p>
-                      <p className="text-white font-medium">{formatDate(withdrawal.processedAt)}</p>
-                      <p className="text-slate-400 text-xs">{formatTime(withdrawal.processedAt)}</p>
+                      <p className="text-slate-400 mb-1">Price:</p>
+                      <p className="text-white font-medium">
+                        {transaction.price}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 mb-1">Date:</p>
+                      <p className="text-white font-medium">
+                        {transaction.date}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 mb-1">Time:</p>
+                      <p className="text-white font-medium">
+                        {transaction.time}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            : activeTab === 'staking'
+            ? stakingHistory.map((transaction) => (
+                <div
+                  key={transaction.id}
+                  className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:bg-slate-700 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(
+                          transaction.type
+                        )}`}
+                      >
+                        {getTypeIcon(transaction.type)}
+                        <span className="capitalize">{transaction.type}</span>
+                      </div>
+                      <div
+                        className={`px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(
+                          transaction.status
+                        )}`}
+                      >
+                        {transaction.status.charAt(0).toUpperCase() +
+                          transaction.status.slice(1)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-white">
+                      {transaction.asset} Staking
+                    </h3>
+                    <span className="text-lg font-semibold text-white">
+                      {transaction.amount}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-slate-400 mb-1">APY:</p>
+                      <p className="text-green-400 font-medium">
+                        {transaction.apy}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 mb-1">Date:</p>
+                      <p className="text-white font-medium">
+                        {transaction.date}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 mb-1">Time:</p>
+                      <p className="text-white font-medium">
+                        {transaction.time}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            : activeTab === 'withdraw'
+            ? withdrawalHistory.map((withdrawal) => (
+                <div
+                  key={withdrawal._id}
+                  className="bg-slate-800 border border-slate-700 rounded-lg p-4 hover:bg-slate-700 transition-colors"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium ${getTypeColor(
+                          'withdraw'
+                        )}`}
+                      >
+                        {getTypeIcon('withdraw')}
+                        <span>Withdraw</span>
+                      </div>
+                      <div
+                        className={`px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(
+                          withdrawal.status
+                        )}`}
+                      >
+                        {withdrawal.status.charAt(0).toUpperCase() +
+                          withdrawal.status.slice(1)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-white">
+                      {withdrawal.currency} Withdrawal
+                    </h3>
+                    <span className="text-lg font-semibold text-white">
+                      {withdrawal.amount} {withdrawal.currency}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-3">
+                    <div>
+                      <p className="text-slate-400 mb-1">Network:</p>
+                      <p className="text-white font-medium">
+                        {withdrawal.network}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-slate-400 mb-1">Fee:</p>
+                      <p className="text-white font-medium">
+                        {withdrawal.fee} {withdrawal.currency}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <p className="text-slate-400 mb-1">Address:</p>
+                    <p className="text-white font-medium text-xs break-all">
+                      {withdrawal.address}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-slate-400 mb-1">Requested:</p>
+                      <p className="text-white font-medium">
+                        {formatDate(withdrawal.requestedAt)}
+                      </p>
+                      <p className="text-slate-400 text-xs">
+                        {formatTime(withdrawal.requestedAt)}
+                      </p>
+                    </div>
+                    {withdrawal.processedAt && (
+                      <div>
+                        <p className="text-slate-400 mb-1">Processed:</p>
+                        <p className="text-white font-medium">
+                          {formatDate(withdrawal.processedAt)}
+                        </p>
+                        <p className="text-slate-400 text-xs">
+                          {formatTime(withdrawal.processedAt)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {withdrawal.rejectionReason && (
+                    <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <p className="text-red-400 text-sm">
+                        <span className="font-medium">Rejection Reason:</span>{' '}
+                        {withdrawal.rejectionReason}
+                      </p>
                     </div>
                   )}
                 </div>
-                
-                {withdrawal.rejectionReason && (
-                  <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p className="text-red-400 text-sm">
-                      <span className="font-medium">Rejection Reason:</span> {withdrawal.rejectionReason}
-                    </p>
-                   </div>
-                 )}
-                </div>
               ))
-           ) : null
-          }
+            : null}
         </div>
 
         {/* Empty state */}
-        {!loading && ((activeTab === 'trade' && tradeHistory.length === 0) || 
-          (activeTab === 'staking' && stakingHistory.length === 0) ||
-          (activeTab === 'withdraw' && withdrawalHistory.length === 0)) && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Bell className="w-8 h-8 text-slate-500" />
+        {!loading &&
+          ((activeTab === 'trade' && tradeHistory.length === 0) ||
+            (activeTab === 'staking' && stakingHistory.length === 0) ||
+            (activeTab === 'withdraw' && withdrawalHistory.length === 0)) && (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Bell className="w-8 h-8 text-slate-500" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-300 mb-2">
+                No {activeTab} history
+              </h3>
+              <p className="text-slate-500">
+                Your {activeTab} transactions will appear here
+              </p>
             </div>
-            <h3 className="text-lg font-medium text-slate-300 mb-2">
-              No {activeTab} history
-            </h3>
-            <p className="text-slate-500">
-              Your {activeTab} transactions will appear here
-            </p>
-          </div>
-        )}
+          )}
       </div>
     </div>
   );

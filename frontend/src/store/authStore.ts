@@ -185,7 +185,7 @@ export const useAuthStore = create<AuthState>()(
           console.log('Making API call to /auth/profile...');
           const response = await axios.get('/auth/profile');
           console.log('API response:', response.data);
-          
+
           const user = response.data.user || response.data;
           console.log('Extracted user:', user);
           console.log('User balances:', user?.balances);
@@ -206,7 +206,7 @@ export const useAuthStore = create<AuthState>()(
       updateBalance: (currency: string, amount: number) => {
         const { user } = get();
 
-        if (user && user.balances.hasOwnProperty(currency)) {
+        if (user && user.balances?.hasOwnProperty(currency)) {
           set({
             user: {
               ...user,

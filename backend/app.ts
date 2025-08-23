@@ -23,7 +23,6 @@ import marketDataRoutes from './routes/marketData';
 import depositAddressRoutes from './routes/depositAddresses';
 import depositsRoutes from './routes/deposits';
 import withdrawalRoutes from './routes/withdrawals';
-import migrationRoutes from './routes/migration';
 import { schedulerService } from './services/schedulerService';
 
 const app: express.Application = express();
@@ -48,7 +47,6 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/admin/deposit-addresses', depositAddressRoutes);
 app.use('/api/deposits', depositsRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
-app.use('/api/migration', migrationRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api', marketDataRoutes);
 

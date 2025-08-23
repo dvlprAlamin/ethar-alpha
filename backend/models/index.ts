@@ -3,19 +3,21 @@ export { default as User } from './User';
 export { default as AdminConfig } from './AdminConfig';
 export { default as Stock } from './Stock';
 export { default as DepositAddress } from './DepositAddress';
+export { Withdrawal } from './Withdrawal';
 
 // Export all interfaces
 export type { IUser } from './User';
 export type { IAdminConfig } from './AdminConfig';
 export type { IStock } from './Stock';
 export type { IDepositAddress } from './DepositAddress';
+export type { IWithdrawal } from './Withdrawal';
 
 // Re-export mongoose for convenience
 export { default as mongoose } from 'mongoose';
 
 // Database connection utility
 import mongoose from 'mongoose';
-import logger from '../utils/logger.js';
+import logger from '../utils/logger';
 
 // Database connection state
 let isConnected = false;

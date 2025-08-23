@@ -13,7 +13,7 @@ interface MulterRequest extends express.Request {
 const router = express.Router();
 
 // Ensure backend uploads qr-codes directory exists
-const qrCodesDir = path.join(process.cwd(), 'backend', 'uploads', 'qr-codes');
+const qrCodesDir = path.join(__dirname, '..', 'uploads', 'qr-codes');
 if (!fs.existsSync(qrCodesDir)) {
   fs.mkdirSync(qrCodesDir, { recursive: true });
 }
@@ -25,16 +25,16 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     // Generate unique filename with timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const extension = path.extname(file.originalname);
     cb(null, `qr-${uniqueSuffix}${extension}`);
-  }
+  },
 });
 
 const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (req, file, cb) => {
     // Only allow image files
@@ -43,7 +43,7 @@ const upload = multer({
     } else {
       cb(new Error('Only image files are allowed'));
     }
-  }
+  },
 });
 
 // Apply authentication middleware to all routes
@@ -54,27 +54,27 @@ router.use(requireAdmin);
 router.get('/', async (req, res) => {
   try {
     const depositAddresses = await DepositAddress.getAllActive();
-    
+
     // Transform data to include QR code URLs
-    const transformedAddresses = depositAddresses.map(addr => ({
+    const transformedAddresses = depositAddresses.map((addr) => ({
       _id: addr._id,
       network: addr.network,
       address: addr.address,
-      qrCodeUrl: addr.qrCodePath ? `${process.env.VITE_SERVER_URL || 'http://localhost:3001'}/qr-codes/${addr.qrCodePath}` : null,
+      qrCodeUrl: addr.qrCodePath,
       isActive: addr.isActive,
       createdAt: addr.createdAt,
-      updatedAt: addr.updatedAt
+      updatedAt: addr.updatedAt,
     }));
 
     res.json({
       success: true,
-      depositAddresses: transformedAddresses
+      depositAddresses: transformedAddresses,
     });
   } catch (error) {
     console.error('Error fetching deposit addresses:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch deposit addresses' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch deposit addresses',
     });
   }
 });
@@ -83,7 +83,7 @@ router.get('/', async (req, res) => {
 router.post('/', upload.single('qrCode'), async (req: MulterRequest, res) => {
   try {
     const { network, address } = req.body;
-    
+
     // Debug logging to check received values
     console.log('Received network:', network);
     console.log('Received address:', address);
@@ -96,7 +96,7 @@ router.post('/', upload.single('qrCode'), async (req: MulterRequest, res) => {
       }
       return res.status(400).json({
         success: false,
-        error: 'Network and address are required'
+        error: 'Network and address are required',
       });
     }
 
@@ -109,13 +109,13 @@ router.post('/', upload.single('qrCode'), async (req: MulterRequest, res) => {
       }
       return res.status(400).json({
         success: false,
-        error: 'Deposit address already exists for this network'
+        error: 'Deposit address already exists for this network',
       });
     }
 
     const depositAddressData: any = {
       network,
-      address
+      address,
     };
 
     // Add QR code path if file was uploaded
@@ -133,11 +133,11 @@ router.post('/', upload.single('qrCode'), async (req: MulterRequest, res) => {
         _id: newDepositAddress._id,
         network: newDepositAddress.network,
         address: newDepositAddress.address,
-        qrCodeUrl: newDepositAddress.qrCodePath ? `${process.env.VITE_SERVER_URL || 'http://localhost:3001'}/qr-codes/${newDepositAddress.qrCodePath}` : null,
+        qrCodeUrl: newDepositAddress.qrCodePath,
         isActive: newDepositAddress.isActive,
         createdAt: newDepositAddress.createdAt,
-        updatedAt: newDepositAddress.updatedAt
-      }
+        updatedAt: newDepositAddress.updatedAt,
+      },
     });
   } catch (error) {
     // Clean up uploaded file if error occurs
@@ -150,17 +150,17 @@ router.post('/', upload.single('qrCode'), async (req: MulterRequest, res) => {
     }
 
     console.error('Error creating deposit address:', error);
-    
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: error.message,
       });
     }
 
     res.status(500).json({
       success: false,
-      error: 'Failed to create deposit address'
+      error: 'Failed to create deposit address',
     });
   }
 });
@@ -179,7 +179,7 @@ router.put('/:id', upload.single('qrCode'), async (req: MulterRequest, res) => {
       }
       return res.status(404).json({
         success: false,
-        error: 'Deposit address not found'
+        error: 'Deposit address not found',
       });
     }
 
@@ -193,7 +193,7 @@ router.put('/:id', upload.single('qrCode'), async (req: MulterRequest, res) => {
         }
         return res.status(400).json({
           success: false,
-          error: 'Deposit address already exists for this network'
+          error: 'Deposit address already exists for this network',
         });
       }
     }
@@ -215,7 +215,7 @@ router.put('/:id', upload.single('qrCode'), async (req: MulterRequest, res) => {
           console.error('Error deleting old QR code:', error);
         }
       }
-      
+
       depositAddress.qrCodePath = req.file.filename;
     }
 
@@ -228,11 +228,11 @@ router.put('/:id', upload.single('qrCode'), async (req: MulterRequest, res) => {
         _id: depositAddress._id,
         network: depositAddress.network,
         address: depositAddress.address,
-        qrCodeUrl: depositAddress.qrCodePath ? `${process.env.VITE_SERVER_URL || 'http://localhost:3001'}/qr-codes/${depositAddress.qrCodePath}` : null,
+        qrCodeUrl: depositAddress.qrCodePath,
         isActive: depositAddress.isActive,
         createdAt: depositAddress.createdAt,
-        updatedAt: depositAddress.updatedAt
-      }
+        updatedAt: depositAddress.updatedAt,
+      },
     });
   } catch (error) {
     // Clean up uploaded file if error occurs
@@ -245,17 +245,17 @@ router.put('/:id', upload.single('qrCode'), async (req: MulterRequest, res) => {
     }
 
     console.error('Error updating deposit address:', error);
-    
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: error.message,
       });
     }
 
     res.status(500).json({
       success: false,
-      error: 'Failed to update deposit address'
+      error: 'Failed to update deposit address',
     });
   }
 });
@@ -269,7 +269,7 @@ router.delete('/:id', async (req, res) => {
     if (!depositAddress) {
       return res.status(404).json({
         success: false,
-        error: 'Deposit address not found'
+        error: 'Deposit address not found',
       });
     }
 
@@ -289,13 +289,13 @@ router.delete('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Deposit address deleted successfully'
+      message: 'Deposit address deleted successfully',
     });
   } catch (error) {
     console.error('Error deleting deposit address:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to delete deposit address'
+      error: 'Failed to delete deposit address',
     });
   }
 });

@@ -58,8 +58,8 @@ depositAddressSchema.statics.getAllActive = function () {
 depositAddressSchema.methods.deleteQRCode = function () {
   if (this.qrCodePath) {
     const fullPath = path.join(
-      process.cwd(),
-      'backend',
+      __dirname,
+      '..',
       'uploads',
       'qr-codes',
       this.qrCodePath
@@ -80,8 +80,8 @@ depositAddressSchema.pre('deleteOne', function () {
   this.model.findOne(this.getQuery()).then((doc) => {
     if (doc && doc.qrCodePath) {
       const fullPath = path.join(
-        process.cwd(),
-        'backend',
+        __dirname,
+        '..',
         'uploads',
         'qr-codes',
         doc.qrCodePath
@@ -102,8 +102,8 @@ depositAddressSchema.pre('findOneAndDelete', function () {
   this.model.findOne(this.getQuery()).then((doc) => {
     if (doc && doc.qrCodePath) {
       const fullPath = path.join(
-        process.cwd(),
-        'backend',
+        __dirname,
+        '..',
         'uploads',
         'qr-codes',
         doc.qrCodePath

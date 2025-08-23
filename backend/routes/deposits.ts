@@ -12,37 +12,39 @@ router.get('/addresses', async (req, res) => {
     if (!dbStatus.isConnected || dbStatus.readyState !== 1) {
       return res.status(503).json({
         success: false,
-        error: 'Database connection unavailable. Please try again later.'
+        error: 'Database connection unavailable. Please try again later.',
       });
     }
 
     const depositAddresses = await DepositAddress.getAllActive();
-    
+
     // Transform data to include QR code URLs for public access
-    const transformedAddresses = depositAddresses.map(addr => ({
+    const transformedAddresses = depositAddresses.map((addr) => ({
       network: addr.network,
       address: addr.address,
-      qrCodeUrl: addr.qrCodePath ? `${process.env.VITE_SERVER_URL || 'http://localhost:3001'}/qr-codes/${addr.qrCodePath}` : null
+      qrCodeUrl: addr.qrCodePath
+        ? `${process.env.SERVER_URL}/qr-codes/${addr.qrCodePath}`
+        : null,
     }));
 
     res.json({
       success: true,
-      depositAddresses: transformedAddresses
+      depositAddresses: transformedAddresses,
     });
   } catch (error) {
     console.error('Error fetching deposit addresses:', error);
-    
+
     // Check if it's a database connection error
     if (error.message && error.message.includes('before initial connection')) {
       return res.status(503).json({
         success: false,
-        error: 'Database connection not ready. Please try again later.'
+        error: 'Database connection not ready. Please try again later.',
       });
     }
-    
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch deposit addresses' 
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch deposit addresses',
     });
   }
 });

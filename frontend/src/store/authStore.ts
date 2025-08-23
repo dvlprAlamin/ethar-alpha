@@ -172,6 +172,7 @@ export const useAuthStore = create<AuthState>()(
         const { token } = get();
 
         if (!token) {
+          console.log('No token available for refresh');
           return;
         }
 
@@ -181,12 +182,19 @@ export const useAuthStore = create<AuthState>()(
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
           }
 
+          console.log('Making API call to /auth/profile...');
           const response = await axios.get('/auth/profile');
-          const user = response.data;
+          console.log('API response:', response.data);
+          
+          const user = response.data.user || response.data;
+          console.log('Extracted user:', user);
+          console.log('User balances:', user?.balances);
 
           set({ user });
+          console.log('User state updated');
         } catch (error: any) {
           console.error('Failed to refresh user:', error);
+          console.error('Error response:', error.response?.data);
 
           // If token is invalid, logout
           if (error.response?.status === 401) {

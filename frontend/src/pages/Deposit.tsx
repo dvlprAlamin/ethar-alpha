@@ -197,21 +197,6 @@ const Deposit: React.FC = () => {
             this address. Sending other assets may result in permanent loss.
           </p>
         </div>
-
-        {/* Additional Info */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-4">
-          <h4 className="text-white font-medium mb-2">Important Notes:</h4>
-          <ul className="text-slate-400 text-sm space-y-1">
-            <li>
-              • Minimum deposit: 0.001 {selectedAddress?.network || 'tokens'}
-            </li>
-            <li>• Network confirmations required: 12</li>
-            <li>• Deposits will be credited after network confirmation</li>
-            <li>
-              • Contact support if you don't receive your deposit within 1 hour
-            </li>
-          </ul>
-        </div>
       </div>
     </div>
   );

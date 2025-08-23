@@ -19,7 +19,7 @@ import {
 import { motion } from 'framer-motion';
 
 interface User {
-  id: string;
+  _id: string;
   email: string;
   name: string;
   balances: {
@@ -39,12 +39,12 @@ interface WithdrawalRequest {
   amount: number;
   address: string;
   status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
+  requestedAt: string;
   reason?: string;
 }
 
 interface DepositAddress {
-  id: string;
+  _id: string;
   network: string;
   address: string;
   qrCodeUrl?: string;
@@ -52,41 +52,6 @@ interface DepositAddress {
   createdAt: string;
   updatedAt: string;
 }
-
-// interface WalletConfig {
-//   depositAddresses: {
-//     BTC: string;
-//     ETH: string;
-//     TRC20: string;
-//     BNB: string;
-//   };
-//   qrCodes: {
-//     BTC: string | null;
-//     ETH: string | null;
-//     TRC20: string | null;
-//     BNB: string | null;
-//   };
-// }
-
-// Helper function to get currency icons
-// const getCurrencyIcon = (network: string) => {
-//   switch (network) {
-//     case 'Bitcoin (BTC)':
-//       return <Bitcoin className="w-4 h-4 text-orange-400" />;
-//     case 'Ethereum (ETH)':
-//       return <Coins className="w-4 h-4 text-blue-400" />;
-//     case 'Tether (USDT TRC20)':
-//       return <DollarSign className="w-4 h-4 text-green-400" />;
-//     case 'Binance Coin (BNB)':
-//       return <Coins className="w-4 h-4 text-yellow-400" />;
-//     case 'Litecoin (LTC)':
-//       return <Coins className="w-4 h-4 text-gray-400" />;
-//     case 'Ripple (XRP)':
-//       return <Coins className="w-4 h-4 text-blue-600" />;
-//     default:
-//       return <Coins className="w-4 h-4 text-slate-400" />;
-//   }
-// };
 
 const Admin: React.FC = () => {
   const { user, token, isAuthenticated } = useAuthStore();
@@ -114,7 +79,7 @@ const Admin: React.FC = () => {
   const [selectedWithdrawal, setSelectedWithdrawal] =
     useState<WithdrawalRequest | null>(null);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
-
+  console.log('selectedWithdrawal', selectedWithdrawal);
   // Deposit Addresses Management State
   const [depositAddresses, setDepositAddresses] = useState<DepositAddress[]>(
     []
@@ -125,8 +90,13 @@ const Admin: React.FC = () => {
   const [editingAddress, setEditingAddress] = useState<DepositAddress | null>(
     null
   );
+  console.log(
+    'showDeleteConfirm && deleteTarget',
+    showDeleteConfirm,
+    deleteTarget
+  );
   const [showAddAddressModal, setShowAddAddressModal] = useState(false);
-  const [showEditAddressModal, setShowEditAddressModal] = useState(false);
+  // const [showEditAddressModal, setShowEditAddressModal] = useState(false);
   const [newAddressForm, setNewAddressForm] = useState({
     network: '',
     address: '',
@@ -198,34 +168,41 @@ const Admin: React.FC = () => {
 
   const loadWithdrawalRequests = async () => {
     try {
-      // Mock data for now - replace with actual API call
-      const mockRequests: WithdrawalRequest[] = [
+      setError(null);
+
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/admin/withdrawal-requests`,
         {
-          id: '1',
-          userId: 'user1',
-          userEmail: 'john@example.com',
-          userName: 'John Doe',
-          currency: 'BTC',
-          amount: 0.5,
-          address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
-          status: 'pending',
-          createdAt: '2024-01-15T10:30:00Z',
-        },
-        {
-          id: '2',
-          userId: 'user2',
-          userEmail: 'jane@example.com',
-          userName: 'Jane Smith',
-          currency: 'ETH',
-          amount: 2.5,
-          address: '0x742d35Cc6634C0532925a3b8D4C0d886E',
-          status: 'pending',
-          createdAt: '2024-01-15T09:15:00Z',
-        },
-      ];
-      setWithdrawalRequests(mockRequests);
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        return;
+      }
+
+      if (response.status === 403) {
+        setError('Access denied. Admin privileges required.');
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        setWithdrawalRequests(data.withdrawalRequests || []);
+      } else {
+        setError('Failed to load withdrawal requests. Please try again.');
+      }
     } catch (error) {
       console.error('Failed to load withdrawal requests:', error);
+      setError('Network error. Please check your connection and try again.');
     }
   };
 
@@ -327,7 +304,7 @@ const Admin: React.FC = () => {
 
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/admin/users/${
-          selectedUser.id
+          selectedUser._id
         }/balance-adjustment`,
         {
           method: 'POST',
@@ -378,27 +355,68 @@ const Admin: React.FC = () => {
     action: 'approve' | 'reject',
     reason?: string
   ) => {
+    console.log(`Attempting to ${action} withdrawal:`, {
+      requestId,
+      action,
+      reason,
+    });
     try {
       setLoading(true);
-      // Mock API call - replace with actual endpoint
-      console.log(`${action} withdrawal request ${requestId}`, reason);
+      setError(null);
 
-      // Update local state
-      setWithdrawalRequests((prev) =>
-        prev.map((req) =>
-          req.id === requestId
-            ? {
-                ...req,
-                status: action === 'approve' ? 'approved' : 'rejected',
-                reason,
-              }
-            : req
-        )
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL
+        }/admin/withdrawal-requests/${requestId}/${action}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(
+            action === 'approve' ? { notes: reason } : { reason }
+          ),
+        }
       );
-      setShowWithdrawalModal(false);
-      setSelectedWithdrawal(null);
+
+      if (response.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        return;
+      }
+
+      if (response.status === 403) {
+        setError('Access denied. Admin privileges required.');
+        return;
+      }
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`Withdrawal ${action} successful:`, result);
+        // Reload withdrawal requests to get updated data
+        await loadWithdrawalRequests();
+        setShowWithdrawalModal(false);
+        setSelectedWithdrawal(null);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`Withdrawal ${action} failed:`, {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorData,
+        });
+        setError(
+          errorData.error ||
+            `Failed to ${action} withdrawal request. Please try again.`
+        );
+      }
     } catch (error) {
       console.error('Failed to process withdrawal:', error);
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -493,7 +511,7 @@ const Admin: React.FC = () => {
 
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/admin/deposit-addresses/${
-          editingAddress.id
+          editingAddress._id
         }`,
         {
           method: 'PUT',
@@ -516,7 +534,7 @@ const Admin: React.FC = () => {
 
       if (response.ok) {
         await loadDepositAddresses();
-        setShowEditAddressModal(false);
+        // setShowEditAddressModal(false);
         setEditingAddress(null);
         setEditAddressForm({ network: '', address: '', qrCode: null });
       } else {
@@ -595,13 +613,13 @@ const Admin: React.FC = () => {
       address: address.address,
       qrCode: null,
     });
-    setShowEditAddressModal(true);
+    // setShowEditAddressModal(true);
   };
 
   const handleCancelEdit = () => {
     setEditingAddress(null);
     setEditAddressForm({ network: '', address: '', qrCode: null });
-    setShowEditAddressModal(false);
+    // setShowEditAddressModal(false);
   };
 
   const confirmDelete = (addressId: string) => {
@@ -624,7 +642,8 @@ const Admin: React.FC = () => {
     await handleCreateAddress();
   };
 
-  const handleSubmitEditAddress = async () => {
+  const handleSubmitEditAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (
       !editAddressForm.network ||
       !editAddressForm.address ||
@@ -689,20 +708,22 @@ const Admin: React.FC = () => {
         )}
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 mb-8">
+        <div className="flex space-x-3 mb-8">
           {[
             { id: 'balance', label: 'User Balance', icon: DollarSign },
             { id: 'withdrawals', label: 'Withdrawals', icon: Minus },
             { id: 'wallet', label: 'Deposit Addresses', icon: Upload },
           ].map((tab) => {
             const Icon = tab.icon;
+            const pendingCount =
+              tab.id === 'withdrawals' ? pendingWithdrawals.length : 0;
             return (
               <button
                 key={tab.id}
                 onClick={() =>
                   setActiveTab(tab.id as 'balance' | 'withdrawals' | 'wallet')
                 }
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors relative ${
                   activeTab === tab.id
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
@@ -710,6 +731,11 @@ const Admin: React.FC = () => {
               >
                 <Icon className="w-5 h-5" />
                 <span>{tab.label}</span>
+                {pendingCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center min-w-[1.5rem]">
+                    {pendingCount}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -759,7 +785,7 @@ const Admin: React.FC = () => {
                   <tbody>
                     {filteredUsers.map((user) => (
                       <tr
-                        key={user.id}
+                        key={user._id}
                         className="border-b border-slate-800 hover:bg-slate-800/50"
                       >
                         <td className="py-3 px-4">
@@ -835,7 +861,7 @@ const Admin: React.FC = () => {
                             {request.amount} {request.currency}
                           </div>
                           <div className="text-slate-400 text-sm">
-                            {new Date(request.createdAt).toLocaleDateString()}
+                            {new Date(request.requestedAt).toLocaleDateString()}
                           </div>
                         </div>
                       </div>
@@ -925,13 +951,12 @@ const Admin: React.FC = () => {
                     ) : (
                       depositAddresses.map((address) => (
                         <tr
-                          key={address.id}
+                          key={address._id}
                           className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
                         >
                           {/* Network */}
                           <td className="py-4 px-4">
                             <div className="flex items-center space-x-2">
-                              {getCurrencyIcon(address.network)}
                               <span className="text-white text-sm font-medium">
                                 {address.network}
                               </span>
@@ -950,7 +975,9 @@ const Admin: React.FC = () => {
                             <div className="flex items-center space-x-2">
                               {address.qrCodeUrl ? (
                                 <img
-                                  src={`${address.qrCodeUrl}`}
+                                  src={`${
+                                    import.meta.env.VITE_SERVER_URL
+                                  }/qr-codes/${address.qrCodeUrl}`}
                                   alt={`${address.network} QR Code`}
                                   className="w-10 h-10 object-cover rounded border border-slate-600"
                                 />
@@ -973,7 +1000,7 @@ const Admin: React.FC = () => {
                                 <Edit2 className="w-4 h-4 text-slate-400 group-hover:text-white" />
                               </button>
                               <button
-                                onClick={() => confirmDelete(address.id)}
+                                onClick={() => confirmDelete(address._id)}
                                 className="p-2 hover:bg-red-600 rounded transition-colors group"
                                 title="Delete address"
                               >
@@ -1153,22 +1180,9 @@ const Admin: React.FC = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">
-                        QR Code (Optional)
+                        QR Code
                       </label>
-                      {editingAddress.qrCodeUrl && (
-                        <div className="mb-2">
-                          <img
-                            src={`${import.meta.env.VITE_API_URL}${
-                              editingAddress.qrCodeUrl
-                            }`}
-                            alt="Current QR Code"
-                            className="w-16 h-16 object-cover rounded border border-slate-600"
-                          />
-                          <p className="text-xs text-slate-400 mt-1">
-                            Current QR Code
-                          </p>
-                        </div>
-                      )}
+
                       <input
                         type="file"
                         accept="image/*"
@@ -1349,7 +1363,7 @@ const Admin: React.FC = () => {
                 <div className="flex justify-between">
                   <span className="text-slate-400">Date:</span>
                   <span className="text-white">
-                    {new Date(selectedWithdrawal.createdAt).toLocaleString()}
+                    {new Date(selectedWithdrawal.requestedAt).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -1406,8 +1420,10 @@ const Admin: React.FC = () => {
               </h3>
 
               <p className="text-slate-300 mb-6">
-                Are you sure you want to delete the {deleteTarget} deposit
-                address? This action cannot be undone.
+                Are you sure you want to delete the{' '}
+                {depositAddresses.find((addr) => addr._id === deleteTarget)
+                  ?.network || deleteTarget}{' '}
+                deposit address? This action cannot be undone.
               </p>
 
               <div className="flex space-x-3">

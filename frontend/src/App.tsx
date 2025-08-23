@@ -24,6 +24,7 @@ import { Loader2 } from 'lucide-react';
 import NotFound from './pages/NotFound';
 import Admin from './pages/Admin';
 import Whitepaper from './pages/Whitepaper';
+import { Toaster } from 'sonner';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -102,6 +103,12 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <Router>
         <div className="App">
+          <Toaster 
+            position="top-right" 
+            richColors 
+            closeButton 
+            duration={4000}
+          />
           <Routes>
             {/* Public Routes */}
             <Route

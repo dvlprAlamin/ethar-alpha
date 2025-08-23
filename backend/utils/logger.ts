@@ -167,14 +167,7 @@ class Logger {
     this.error(`[DATABASE] ${message}`, error, extra);
   }
 
-  // WebSocket-specific logging
-  wsInfo(message: string, extra: Record<string, any> = {}) {
-    this.info(`[WEBSOCKET] ${message}`, extra);
-  }
 
-  wsError(message: string, error?: Error, extra: Record<string, any> = {}) {
-    this.error(`[WEBSOCKET] ${message}`, error, extra);
-  }
 
   // Request logging middleware helper
   createRequestLogger(requestId: string, userId?: string) {

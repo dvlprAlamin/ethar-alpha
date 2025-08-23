@@ -2,11 +2,13 @@
 export { default as User } from './User';
 export { default as AdminConfig } from './AdminConfig';
 export { default as Stock } from './Stock';
+export { default as DepositAddress } from './DepositAddress';
 
 // Export all interfaces
 export type { IUser } from './User';
 export type { IAdminConfig } from './AdminConfig';
 export type { IStock } from './Stock';
+export type { IDepositAddress } from './DepositAddress';
 
 // Re-export mongoose for convenience
 export { default as mongoose } from 'mongoose';

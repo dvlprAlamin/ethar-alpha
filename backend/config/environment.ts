@@ -30,8 +30,7 @@ interface EnvironmentConfig {
   CLIENT_URL: string;
   SERVER_URL: string;
   
-  // WebSocket
-  WS_PORT: number;
+
   
   // Admin
   ADMIN_EMAIL: string;
@@ -79,8 +78,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
                 process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` :
                 `http://localhost:${process.env.PORT || 3001}`,
     
-    // WebSocket
-    WS_PORT: parseInt(process.env.WS_PORT || '3002', 10),
+    //
     
     // Admin defaults
     ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@crypto-platform.com',
@@ -98,9 +96,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
     errors.push('PORT must be a valid number between 1 and 65535');
   }
   
-  if (isNaN(config.WS_PORT) || config.WS_PORT < 1 || config.WS_PORT > 65535) {
-    errors.push('WS_PORT must be a valid number between 1 and 65535');
-  }
+
   
   // Check for Railway-specific environment
   const isRailway = !!process.env.RAILWAY_ENVIRONMENT;
@@ -142,7 +138,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
   console.log('🔧 Environment Configuration:');
   console.log(`   NODE_ENV: ${config.NODE_ENV}`);
   console.log(`   PORT: ${config.PORT}`);
-  console.log(`   WS_PORT: ${config.WS_PORT}`);
+  
   console.log(`   CLIENT_URL: ${config.CLIENT_URL}`);
   console.log(`   SERVER_URL: ${config.SERVER_URL}`);
   console.log(`   MONGODB_URI: ${config.MONGODB_URI ? '✅ Set' : '❌ Missing'}`);
@@ -198,7 +194,7 @@ export const {
   NODE_ENV,
   CLIENT_URL,
   SERVER_URL,
-  WS_PORT,
+
   ADMIN_EMAIL,
   ADMIN_PASSWORD,
   OPENSEA_API_KEY,

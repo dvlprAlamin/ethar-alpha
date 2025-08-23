@@ -2,9 +2,7 @@
  * Server entry file for local development and Railway deployment
  */
 import { createServer } from 'http';
-import { Server as SocketIOServer } from 'socket.io';
 import app from './app.js';
-import WebSocketServer from './websocket.js';
 import { config } from './config/environment.js';
 import logger from './utils/logger.js';
 
@@ -12,20 +10,9 @@ import logger from './utils/logger.js';
  * Start server with proper error handling for Railway deployment
  */
 const PORT = config.PORT;
-const WS_PORT = config.WS_PORT;
 
 // Create HTTP server with error handling
 const server = createServer(app);
-
-// Initialize WebSocket server with error handling
-let wsServer: WebSocketServer | null = null;
-try {
-  wsServer = new WebSocketServer(server);
-  logger.wsInfo('WebSocket server initialized successfully');
-} catch (error) {
-  logger.wsError('WebSocket server initialization failed', error as Error);
-  logger.warn('Server will continue without WebSocket functionality');
-}
 
 // Server error handling
 let hasTriedFallback = false;
@@ -60,11 +47,11 @@ server.on('error', (error: NodeJS.ErrnoException) => {
 
     fallbackServer.listen(fallbackPort, () => {
       logger.railwayInfo(`Server started on fallback port ${fallbackPort}`, {
-        originalPort: PORT,
-        fallbackPort,
-        environment: config.NODE_ENV,
-        healthCheck: `http://localhost:${fallbackPort}/api/health`,
-      });
+      originalPort: PORT,
+      fallbackPort,
+      environment: config.NODE_ENV,
+      healthCheck: `http://localhost:${fallbackPort}/api/health`,
+    });
     });
   } else if (error.code === 'EADDRINUSE' && hasTriedFallback) {
     logger.railwayError('Both primary and fallback ports are in use', error, {
@@ -86,7 +73,6 @@ server.listen(PORT, () => {
     serverUrl: config.SERVER_URL,
     clientUrl: config.CLIENT_URL,
     healthCheck: `http://localhost:${PORT}/api/health`,
-    wsPort: WS_PORT,
   });
 
   if (config.NODE_ENV === 'production') {
@@ -113,16 +99,6 @@ const gracefulShutdown = (signal: string) => {
     });
     process.exit(1);
   }, 10000); // 10 seconds timeout
-
-  // Close WebSocket server
-  if (wsServer) {
-    try {
-      wsServer.disconnect();
-      logger.wsInfo('WebSocket server disconnected successfully');
-    } catch (error) {
-      logger.wsError('Error disconnecting WebSocket server', error as Error);
-    }
-  }
 
   // Close HTTP server
   server.close((error) => {
@@ -164,7 +140,6 @@ process.on('unhandledRejection', (reason, promise) => {
   gracefulShutdown('UNHANDLED_REJECTION');
 });
 
-// Export WebSocket server instance for use in other modules
-export { wsServer };
+
 
 export default app; // Restart trigger

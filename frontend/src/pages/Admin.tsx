@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import Card from '../components/Card';
+import { NETWORK_OPTIONS } from '../constants/networks';
 import {
   Search,
   Minus,
@@ -13,7 +14,7 @@ import {
   Coins,
   Plus,
   Edit2,
-  MoreVertical,
+  Trash2,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -42,20 +43,50 @@ interface WithdrawalRequest {
   reason?: string;
 }
 
-interface WalletConfig {
-  depositAddresses: {
-    BTC: string;
-    ETH: string;
-    TRC20: string;
-    BNB: string;
-  };
-  qrCodes: {
-    BTC: string | null;
-    ETH: string | null;
-    TRC20: string | null;
-    BNB: string | null;
-  };
+interface DepositAddress {
+  id: string;
+  network: string;
+  address: string;
+  qrCodeUrl?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
+
+// interface WalletConfig {
+//   depositAddresses: {
+//     BTC: string;
+//     ETH: string;
+//     TRC20: string;
+//     BNB: string;
+//   };
+//   qrCodes: {
+//     BTC: string | null;
+//     ETH: string | null;
+//     TRC20: string | null;
+//     BNB: string | null;
+//   };
+// }
+
+// Helper function to get currency icons
+// const getCurrencyIcon = (network: string) => {
+//   switch (network) {
+//     case 'Bitcoin (BTC)':
+//       return <Bitcoin className="w-4 h-4 text-orange-400" />;
+//     case 'Ethereum (ETH)':
+//       return <Coins className="w-4 h-4 text-blue-400" />;
+//     case 'Tether (USDT TRC20)':
+//       return <DollarSign className="w-4 h-4 text-green-400" />;
+//     case 'Binance Coin (BNB)':
+//       return <Coins className="w-4 h-4 text-yellow-400" />;
+//     case 'Litecoin (LTC)':
+//       return <Coins className="w-4 h-4 text-gray-400" />;
+//     case 'Ripple (XRP)':
+//       return <Coins className="w-4 h-4 text-blue-600" />;
+//     default:
+//       return <Coins className="w-4 h-4 text-slate-400" />;
+//   }
+// };
 
 const Admin: React.FC = () => {
   const { user, token, isAuthenticated } = useAuthStore();
@@ -73,7 +104,6 @@ const Admin: React.FC = () => {
     currency: 'USD',
     type: 'add',
     amount: '',
-    reason: '',
   });
   const [showBalanceModal, setShowBalanceModal] = useState(false);
 
@@ -85,24 +115,24 @@ const Admin: React.FC = () => {
     useState<WithdrawalRequest | null>(null);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
 
-  // Wallet Configuration State
-  const [walletConfig, setWalletConfig] = useState<WalletConfig>({
-    depositAddresses: { BTC: '', ETH: '', TRC20: '', BNB: '' },
-    qrCodes: { BTC: null, ETH: null, TRC20: null, BNB: null },
-  });
-  const [editingAddresses, setEditingAddresses] = useState(false);
-  const [tempAddresses, setTempAddresses] = useState({
-    BTC: '',
-    ETH: '',
-    TRC20: '',
-    BNB: '',
-  });
+  // Deposit Addresses Management State
+  const [depositAddresses, setDepositAddresses] = useState<DepositAddress[]>(
+    []
+  );
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [editingAddress, setEditingAddress] = useState<string | null>(null);
-  const [tempEditAddress, setTempEditAddress] = useState('');
+  const [editingAddress, setEditingAddress] = useState<DepositAddress | null>(
+    null
+  );
   const [showAddAddressModal, setShowAddAddressModal] = useState(false);
+  const [showEditAddressModal, setShowEditAddressModal] = useState(false);
   const [newAddressForm, setNewAddressForm] = useState({
+    network: '',
+    address: '',
+    qrCode: null as File | null,
+  });
+  const [editAddressForm, setEditAddressForm] = useState({
     network: '',
     address: '',
     qrCode: null as File | null,
@@ -199,7 +229,7 @@ const Admin: React.FC = () => {
     }
   };
 
-  const loadWalletConfig = async () => {
+  const loadDepositAddresses = async () => {
     try {
       setError(null);
 
@@ -209,7 +239,7 @@ const Admin: React.FC = () => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/wallet-config`,
+        `${import.meta.env.VITE_API_URL}/admin/deposit-addresses`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -229,13 +259,12 @@ const Admin: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setWalletConfig(data);
-        setTempAddresses(data.depositAddresses);
+        setDepositAddresses(data.depositAddresses || []);
       } else {
-        setError('Failed to load wallet configuration. Please try again.');
+        setError('Failed to load deposit addresses. Please try again.');
       }
     } catch (error) {
-      console.error('Failed to load wallet config:', error);
+      console.error('Failed to load deposit addresses:', error);
       setError('Network error. Please check your connection and try again.');
     }
   };
@@ -247,7 +276,7 @@ const Admin: React.FC = () => {
     }
     loadUsers();
     loadWithdrawalRequests();
-    loadWalletConfig();
+    loadDepositAddresses();
   }, [user]);
 
   // Show loading while checking authentication
@@ -285,7 +314,7 @@ const Admin: React.FC = () => {
   }
 
   const handleBalanceAdjustment = async () => {
-    if (!selectedUser || !balanceForm.amount || !balanceForm.reason) return;
+    if (!selectedUser || !balanceForm.amount) return;
 
     try {
       setLoading(true);
@@ -310,7 +339,6 @@ const Admin: React.FC = () => {
             currency: balanceForm.currency,
             type: balanceForm.type,
             amount: parseFloat(balanceForm.amount),
-            reason: balanceForm.reason,
           }),
         }
       );
@@ -332,7 +360,6 @@ const Admin: React.FC = () => {
           currency: 'USD',
           type: 'add',
           amount: '',
-          reason: '',
         });
         setSelectedUser(null);
       } else {
@@ -377,7 +404,7 @@ const Admin: React.FC = () => {
     }
   };
 
-  const handleAddressUpdate = async () => {
+  const handleCreateAddress = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -387,81 +414,26 @@ const Admin: React.FC = () => {
         return;
       }
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/wallet-config/addresses`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(tempAddresses),
-        }
-      );
-
-      if (response.status === 401) {
-        setError('Authentication failed. Please log in again.');
+      if (!newAddressForm.network || !newAddressForm.address) {
+        setError('Network and address are required.');
         return;
       }
 
-      if (response.status === 403) {
-        setError('Access denied. Admin privileges required.');
-        return;
+      const formData = new FormData();
+      formData.append('network', newAddressForm.network);
+      formData.append('address', newAddressForm.address);
+      if (newAddressForm.qrCode) {
+        formData.append('qrCode', newAddressForm.qrCode);
       }
-
-      if (response.ok) {
-        setWalletConfig((prev) => ({
-          ...prev,
-          depositAddresses: tempAddresses,
-        }));
-        setEditingAddresses(false);
-      } else {
-        setError('Failed to update wallet addresses. Please try again.');
-      }
-    } catch (error) {
-      console.error('Failed to update addresses:', error);
-      setError('Network error. Please check your connection and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQRUpload = async (currency: string, file: File) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      if (!token) {
-        setError('Authentication token not found. Please log in again.');
-        return;
-      }
-
-      // Convert file to base64
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          // Remove data:image/...;base64, prefix
-          const base64Data = result.split(',')[1];
-          resolve(base64Data);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-
-      const qrCodeBase64 = await base64Promise;
 
       const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL
-        }/admin/wallet-config/qr-upload/${currency}`,
+        `${import.meta.env.VITE_API_URL}/admin/deposit-addresses`,
         {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ qrCodeBase64 }),
+          body: formData,
         }
       );
 
@@ -476,23 +448,24 @@ const Admin: React.FC = () => {
       }
 
       if (response.ok) {
-        const data = await response.json();
-        setWalletConfig((prev) => ({
-          ...prev,
-          qrCodes: { ...prev.qrCodes, [currency]: data.qrCode },
-        }));
+        await loadDepositAddresses();
+        setShowAddAddressModal(false);
+        setNewAddressForm({ network: '', address: '', qrCode: null });
       } else {
-        setError('Failed to upload QR code. Please try again.');
+        const errorData = await response.json();
+        setError(
+          errorData.message || 'Failed to create address. Please try again.'
+        );
       }
     } catch (error) {
-      console.error('Failed to upload QR code:', error);
+      console.error('Failed to create address:', error);
       setError('Network error. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteAddress = async (currency: string) => {
+  const handleUpdateAddress = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -502,10 +475,83 @@ const Admin: React.FC = () => {
         return;
       }
 
+      if (
+        !editingAddress ||
+        !editAddressForm.network ||
+        !editAddressForm.address
+      ) {
+        setError('Network and address are required.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('network', editAddressForm.network);
+      formData.append('address', editAddressForm.address);
+      if (editAddressForm.qrCode) {
+        formData.append('qrCode', editAddressForm.qrCode);
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/admin/deposit-addresses/${
+          editingAddress.id
+        }`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (response.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        return;
+      }
+
+      if (response.status === 403) {
+        setError('Access denied. Admin privileges required.');
+        return;
+      }
+
+      if (response.ok) {
+        await loadDepositAddresses();
+        setShowEditAddressModal(false);
+        setEditingAddress(null);
+        setEditAddressForm({ network: '', address: '', qrCode: null });
+      } else {
+        const errorData = await response.json();
+        setError(
+          errorData.message || 'Failed to update address. Please try again.'
+        );
+      }
+    } catch (error) {
+      console.error('Failed to update address:', error);
+      setError('Network error. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAddress = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      if (!deleteTarget) {
+        setError('No address selected for deletion.');
+        return;
+      }
+
       const response = await fetch(
         `${
           import.meta.env.VITE_API_URL
-        }/admin/wallet-config/addresses/${currency}`,
+        }/admin/deposit-addresses/${deleteTarget}`,
         {
           method: 'DELETE',
           headers: {
@@ -525,15 +571,14 @@ const Admin: React.FC = () => {
       }
 
       if (response.ok) {
-        setWalletConfig((prev) => ({
-          ...prev,
-          depositAddresses: { ...prev.depositAddresses, [currency]: '' },
-          qrCodes: { ...prev.qrCodes, [currency]: null },
-        }));
+        await loadDepositAddresses();
         setShowDeleteConfirm(false);
         setDeleteTarget(null);
       } else {
-        setError('Failed to delete address. Please try again.');
+        const errorData = await response.json();
+        setError(
+          errorData.message || 'Failed to delete address. Please try again.'
+        );
       }
     } catch (error) {
       console.error('Failed to delete address:', error);
@@ -543,140 +588,53 @@ const Admin: React.FC = () => {
     }
   };
 
-  const handleEditAddress = (currency: string) => {
-    setEditingAddress(currency);
-    setTempEditAddress(
-      walletConfig.depositAddresses[
-        currency as keyof typeof walletConfig.depositAddresses
-      ] || ''
-    );
-  };
-
-  const handleSaveAddress = async (currency: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      if (!token) {
-        setError('Authentication token not found. Please log in again.');
-        return;
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/wallet-config/addresses`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            ...walletConfig.depositAddresses,
-            [currency]: tempEditAddress,
-          }),
-        }
-      );
-
-      if (response.status === 401) {
-        setError('Authentication failed. Please log in again.');
-        return;
-      }
-
-      if (response.status === 403) {
-        setError('Access denied. Admin privileges required.');
-        return;
-      }
-
-      if (response.ok) {
-        setWalletConfig((prev) => ({
-          ...prev,
-          depositAddresses: {
-            ...prev.depositAddresses,
-            [currency]: tempEditAddress,
-          },
-        }));
-        setEditingAddress(null);
-        setTempEditAddress('');
-      } else {
-        setError('Failed to update address. Please try again.');
-      }
-    } catch (error) {
-      console.error('Failed to update address:', error);
-      setError('Network error. Please check your connection and try again.');
-    } finally {
-      setLoading(false);
-    }
+  const handleEditAddress = (address: DepositAddress) => {
+    setEditingAddress(address);
+    setEditAddressForm({
+      network: address.network,
+      address: address.address,
+      qrCode: null,
+    });
+    setShowEditAddressModal(true);
   };
 
   const handleCancelEdit = () => {
     setEditingAddress(null);
-    setTempEditAddress('');
+    setEditAddressForm({ network: '', address: '', qrCode: null });
+    setShowEditAddressModal(false);
   };
 
-  const confirmDelete = (currency: string) => {
-    setDeleteTarget(currency);
+  const confirmDelete = (addressId: string) => {
+    setDeleteTarget(addressId);
     setShowDeleteConfirm(true);
   };
 
-  const handleAddNewAddress = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const handleCancelAdd = () => {
+    setNewAddressForm({ network: '', address: '', qrCode: null });
+    setShowAddAddressModal(false);
+  };
 
-      if (!token) {
-        setError('Authentication token not found. Please log in again.');
-        return;
-      }
-
-      if (!newAddressForm.network || !newAddressForm.address) {
-        setError('Please fill in all required fields.');
-        return;
-      }
-
-      // First, add the address
-      const addressResponse = await fetch(
-        `${import.meta.env.VITE_API_URL}/admin/wallet-config/addresses`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            ...walletConfig.depositAddresses,
-            [newAddressForm.network]: newAddressForm.address,
-          }),
-        }
-      );
-
-      if (!addressResponse.ok) {
-        setError('Failed to add new address. Please try again.');
-        return;
-      }
-
-      // If QR code is provided, upload it
-      if (newAddressForm.qrCode) {
-        await handleQRUpload(newAddressForm.network, newAddressForm.qrCode);
-      }
-
-      // Update local state
-      setWalletConfig((prev) => ({
-        ...prev,
-        depositAddresses: {
-          ...prev.depositAddresses,
-          [newAddressForm.network]: newAddressForm.address,
-        },
-      }));
-
-      // Reset form and close modal
-      setNewAddressForm({ network: '', address: '', qrCode: null });
-      setShowAddAddressModal(false);
-    } catch (error) {
-      console.error('Failed to add new address:', error);
-      setError('Network error. Please check your connection and try again.');
-    } finally {
-      setLoading(false);
+  const handleSubmitNewAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAddressForm.network || !newAddressForm.address) {
+      setError('Please fill in all required fields.');
+      return;
     }
+
+    await handleCreateAddress();
+  };
+
+  const handleSubmitEditAddress = async () => {
+    if (
+      !editAddressForm.network ||
+      !editAddressForm.address ||
+      !editingAddress
+    ) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+
+    await handleUpdateAddress();
   };
 
   const filteredUsers = users.filter(
@@ -735,7 +693,7 @@ const Admin: React.FC = () => {
           {[
             { id: 'balance', label: 'User Balance', icon: DollarSign },
             { id: 'withdrawals', label: 'Withdrawals', icon: Minus },
-            { id: 'wallet', label: 'Wallet Config', icon: Upload },
+            { id: 'wallet', label: 'Deposit Addresses', icon: Upload },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -907,7 +865,7 @@ const Admin: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Wallet Configuration */}
+        {/* Deposit Addresses Management */}
         {activeTab === 'wallet' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -919,8 +877,11 @@ const Admin: React.FC = () => {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-semibold text-white mb-1">
-                    Deposit Management
+                    Deposit Addresses Management
                   </h2>
+                  <p className="text-slate-400 text-sm">
+                    Manage cryptocurrency deposit addresses and QR codes
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowAddAddressModal(true)}
@@ -951,152 +912,297 @@ const Admin: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {[
-                      { currency: 'BTC', name: 'Bitcoin (BTC)' },
-                      { currency: 'ETH', name: 'Ethereum (ETH)' },
-                      { currency: 'TRC20', name: 'Tether (USDT TRC20)' },
-                      { currency: 'BNB', name: 'Binance Coin (BNB)' },
-                    ].map((network, index) => (
-                      <tr
-                        key={network.currency}
-                        className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
-                      >
-                        {/* Network */}
-                        <td className="py-4 px-4">
-                          <span className="text-white text-sm font-medium">
-                            {network.name}
-                          </span>
+                    {depositAddresses.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="py-8 text-center text-slate-400"
+                        >
+                          No deposit addresses configured. Click "Add New
+                          Deposit Address" to get started.
                         </td>
+                      </tr>
+                    ) : (
+                      depositAddresses.map((address) => (
+                        <tr
+                          key={address.id}
+                          className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
+                        >
+                          {/* Network */}
+                          <td className="py-4 px-4">
+                            <div className="flex items-center space-x-2">
+                              {getCurrencyIcon(address.network)}
+                              <span className="text-white text-sm font-medium">
+                                {address.network}
+                              </span>
+                            </div>
+                          </td>
 
-                        {/* Wallet Address */}
-                        <td className="py-4 px-4">
-                          <div className="flex items-center space-x-2">
-                            {editingAddress === network.currency ? (
-                              <>
-                                <input
-                                  type="text"
-                                  value={tempEditAddress}
-                                  onChange={(e) =>
-                                    setTempEditAddress(e.target.value)
-                                  }
-                                  className="bg-slate-700 border border-slate-600 rounded px-3 py-1 text-white text-sm flex-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  placeholder={`Enter ${network.currency} address`}
-                                  autoFocus
-                                />
-                                <button
-                                  onClick={() =>
-                                    handleSaveAddress(network.currency)
-                                  }
-                                  className="p-1 hover:bg-green-600 rounded transition-colors"
-                                  disabled={loading}
-                                >
-                                  <Check className="w-4 h-4 text-green-400 hover:text-white" />
-                                </button>
-                                <button
-                                  onClick={handleCancelEdit}
-                                  className="p-1 hover:bg-red-600 rounded transition-colors"
-                                >
-                                  <X className="w-4 h-4 text-red-400 hover:text-white" />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-white text-sm flex-1 truncate">
-                                  {walletConfig.depositAddresses[
-                                    network.currency as keyof typeof walletConfig.depositAddresses
-                                  ] || 'No address set'}
-                                </span>
-                                <button
-                                  onClick={() =>
-                                    handleEditAddress(network.currency)
-                                  }
-                                  className="p-1 hover:bg-slate-600 rounded transition-colors"
-                                >
-                                  <Edit2 className="w-4 h-4 text-slate-400 hover:text-white" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
+                          {/* Wallet Address */}
+                          <td className="py-4 px-4">
+                            <span className="text-white text-sm font-mono break-all">
+                              {address.address}
+                            </span>
+                          </td>
 
-                        {/* QR Code */}
-                        <td className="py-4 px-4">
-                          <div className="flex items-center space-x-2">
-                            {walletConfig.qrCodes[
-                              network.currency as keyof typeof walletConfig.qrCodes
-                            ] ? (
-                              <div className="flex items-center space-x-2">
+                          {/* QR Code */}
+                          <td className="py-4 px-4">
+                            <div className="flex items-center space-x-2">
+                              {address.qrCodeUrl ? (
                                 <img
-                                  src={`data:image/png;base64,${walletConfig
-                                    .qrCodes[
-                                    network.currency as keyof typeof walletConfig.qrCodes
-                                  ]!}`}
-                                  alt={`${network.currency} QR Code`}
+                                  src={`${address.qrCodeUrl}`}
+                                  alt={`${address.network} QR Code`}
                                   className="w-10 h-10 object-cover rounded border border-slate-600"
                                 />
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file)
-                                      handleQRUpload(network.currency, file);
-                                  }}
-                                  className="hidden"
-                                  id={`qr-edit-${network.currency}`}
-                                />
-                                <label
-                                  htmlFor={`qr-edit-${network.currency}`}
-                                  className="p-1 hover:bg-slate-600 rounded cursor-pointer transition-colors"
-                                >
-                                  <Edit2 className="w-4 h-4 text-slate-400 hover:text-white" />
-                                </label>
-                              </div>
-                            ) : (
-                              <div className="flex items-center space-x-2">
+                              ) : (
                                 <div className="w-10 h-10 bg-slate-700 border border-slate-600 rounded flex items-center justify-center">
                                   <Upload className="w-4 h-4 text-slate-400" />
                                 </div>
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file)
-                                      handleQRUpload(network.currency, file);
-                                  }}
-                                  className="hidden"
-                                  id={`qr-upload-${network.currency}`}
-                                />
-                                <label
-                                  htmlFor={`qr-upload-${network.currency}`}
-                                  className="p-1 hover:bg-slate-600 rounded cursor-pointer transition-colors"
-                                >
-                                  <Edit2 className="w-4 h-4 text-slate-400 hover:text-white" />
-                                </label>
-                              </div>
-                            )}
-                          </div>
-                        </td>
+                              )}
+                            </div>
+                          </td>
 
-                        {/* Actions */}
-                        <td className="py-4 px-4">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => confirmDelete(network.currency)}
-                              className="p-2 hover:bg-red-600 rounded transition-colors group"
-                              title="Delete address"
-                            >
-                              <X className="w-4 h-4 text-red-400 group-hover:text-white" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          {/* Actions */}
+                          <td className="py-4 px-4">
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleEditAddress(address)}
+                                className="p-2 hover:bg-slate-600 rounded transition-colors group"
+                                title="Edit address"
+                              >
+                                <Edit2 className="w-4 h-4 text-slate-400 group-hover:text-white" />
+                              </button>
+                              <button
+                                onClick={() => confirmDelete(address.id)}
+                                className="p-2 hover:bg-red-600 rounded transition-colors group"
+                                title="Delete address"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-400 group-hover:text-white" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
             </Card>
+
+            {/* Add New Deposit Address Modal */}
+            {showAddAddressModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white">
+                      Add New Deposit Address
+                    </h3>
+                    <button
+                      onClick={handleCancelAdd}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={handleSubmitNewAddress} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Network
+                      </label>
+                      <select
+                        value={newAddressForm.network}
+                        onChange={(e) =>
+                          setNewAddressForm({
+                            ...newAddressForm,
+                            network: e.target.value,
+                          })
+                        }
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="">Select Network</option>
+                        {NETWORK_OPTIONS.map((network) => (
+                          <option key={network} value={network}>
+                            {network}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Wallet Address
+                      </label>
+                      <input
+                        type="text"
+                        value={newAddressForm.address}
+                        onChange={(e) =>
+                          setNewAddressForm({
+                            ...newAddressForm,
+                            address: e.target.value,
+                          })
+                        }
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter wallet address"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        QR Code (Optional)
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          setNewAddressForm({
+                            ...newAddressForm,
+                            qrCode: file || null,
+                          });
+                        }}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                      />
+                    </div>
+
+                    <div className="flex space-x-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleCancelAdd}
+                        className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white py-2 px-4 rounded-lg transition-colors"
+                      >
+                        {loading ? 'Creating...' : 'Create Address'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* Edit Deposit Address Modal */}
+            {editingAddress && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-white">
+                      Edit Deposit Address
+                    </h3>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <form
+                    onSubmit={handleSubmitEditAddress}
+                    className="space-y-4"
+                  >
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Network
+                      </label>
+                      <select
+                        value={editAddressForm.network}
+                        onChange={(e) =>
+                          setEditAddressForm({
+                            ...editAddressForm,
+                            network: e.target.value,
+                          })
+                        }
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      >
+                        <option value="">Select Network</option>
+                        {NETWORK_OPTIONS.map((network) => (
+                          <option key={network} value={network}>
+                            {network}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Wallet Address
+                      </label>
+                      <input
+                        type="text"
+                        value={editAddressForm.address}
+                        onChange={(e) =>
+                          setEditAddressForm({
+                            ...editAddressForm,
+                            address: e.target.value,
+                          })
+                        }
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter wallet address"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        QR Code (Optional)
+                      </label>
+                      {editingAddress.qrCodeUrl && (
+                        <div className="mb-2">
+                          <img
+                            src={`${import.meta.env.VITE_API_URL}${
+                              editingAddress.qrCodeUrl
+                            }`}
+                            alt="Current QR Code"
+                            className="w-16 h-16 object-cover rounded border border-slate-600"
+                          />
+                          <p className="text-xs text-slate-400 mt-1">
+                            Current QR Code
+                          </p>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          setEditAddressForm({
+                            ...editAddressForm,
+                            qrCode: file || null,
+                          });
+                        }}
+                        className="w-full bg-slate-700 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-blue-600 file:text-white hover:file:bg-blue-700"
+                      />
+                    </div>
+
+                    <div className="flex space-x-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={handleCancelEdit}
+                        className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded-lg transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 text-white py-2 px-4 rounded-lg transition-colors"
+                      >
+                        {loading ? 'Updating...' : 'Update Address'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1168,32 +1274,12 @@ const Admin: React.FC = () => {
                     placeholder="Enter amount"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Reason
-                  </label>
-                  <textarea
-                    value={balanceForm.reason}
-                    onChange={(e) =>
-                      setBalanceForm((prev) => ({
-                        ...prev,
-                        reason: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                    placeholder="Enter reason for adjustment"
-                  />
-                </div>
               </div>
 
               <div className="flex space-x-3 mt-6">
                 <button
                   onClick={handleBalanceAdjustment}
-                  disabled={
-                    loading || !balanceForm.amount || !balanceForm.reason
-                  }
+                  disabled={loading || !balanceForm.amount}
                   className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white py-2 rounded-lg font-medium transition-colors"
                 >
                   {loading ? 'Processing...' : 'Apply Adjustment'}
@@ -1206,7 +1292,6 @@ const Admin: React.FC = () => {
                       currency: 'USD',
                       type: 'add',
                       amount: '',
-                      reason: '',
                     });
                   }}
                   className="px-6 bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-medium transition-colors"
@@ -1327,7 +1412,7 @@ const Admin: React.FC = () => {
 
               <div className="flex space-x-3">
                 <button
-                  onClick={() => handleDeleteAddress(deleteTarget!)}
+                  onClick={() => handleDeleteAddress()}
                   disabled={loading}
                   className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-600 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
                 >
@@ -1338,108 +1423,6 @@ const Admin: React.FC = () => {
                   onClick={() => {
                     setShowDeleteConfirm(false);
                     setDeleteTarget(null);
-                  }}
-                  className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Add New Address Modal */}
-        {showAddAddressModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4"
-            >
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Add New Deposit Address
-              </h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Network *
-                  </label>
-                  <select
-                    value={newAddressForm.network}
-                    onChange={(e) =>
-                      setNewAddressForm((prev) => ({
-                        ...prev,
-                        network: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Network</option>
-                    <option value="BTC">Bitcoin (BTC)</option>
-                    <option value="ETH">Ethereum (ETH)</option>
-                    <option value="TRC20">Tether (USDT TRC20)</option>
-                    <option value="BNB">Binance Coin (BNB)</option>
-                    <option value="LTC">Litecoin (LTC)</option>
-                    <option value="ADA">Cardano (ADA)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Wallet Address *
-                  </label>
-                  <input
-                    type="text"
-                    value={newAddressForm.address}
-                    onChange={(e) =>
-                      setNewAddressForm((prev) => ({
-                        ...prev,
-                        address: e.target.value,
-                      }))
-                    }
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter wallet address"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    QR Code (Optional)
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      setNewAddressForm((prev) => ({ ...prev, qrCode: file }));
-                    }}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-sm file:bg-slate-600 file:text-white hover:file:bg-slate-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex space-x-3 mt-6">
-                <button
-                  onClick={handleAddNewAddress}
-                  disabled={
-                    loading ||
-                    !newAddressForm.network ||
-                    !newAddressForm.address
-                  }
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{loading ? 'Adding...' : 'Add Address'}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAddAddressModal(false);
-                    setNewAddressForm({
-                      network: '',
-                      address: '',
-                      qrCode: null,
-                    });
                   }}
                   className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-medium transition-colors"
                 >

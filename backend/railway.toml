@@ -28,7 +28,7 @@ healthcheckInterval = 30
 # - CLIENT_URL (default: "http://localhost:5173")
 # - ADMIN_EMAIL (default: "admin@ethar.com")
 # - ADMIN_PASSWORD (default: "admin123" - CHANGE IN PRODUCTION!)
-# - WS_PORT (default: 3002, will use PORT+1 if not set)
+
 # 
 # The enhanced health check endpoint provides:
 # - Database connection status

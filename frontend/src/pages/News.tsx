@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useWebSocketStore } from '../store/websocketStore';
 import { useAuthStore } from '../store/authStore';
 import {
   Newspaper,
@@ -37,7 +36,6 @@ interface LegacyNewsArticle {
 
 const News: React.FC = () => {
   const { user } = useAuthStore();
-  const { news, isConnected, subscribeToNews } = useWebSocketStore();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -46,28 +44,22 @@ const News: React.FC = () => {
   const [additionalNews, setAdditionalNews] = useState<NewsArticle[]>([]);
 
   useEffect(() => {
-    console.log('🚀 News component mounted - isConnected:', isConnected);
+    console.log('🚀 News component mounted');
 
-    // Always try to fetch news on initial load, regardless of WebSocket connection
+    // Fetch news on initial load
     fetchAdditionalNews(1, false);
 
-    if (isConnected) {
-      subscribeToNews();
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(() => {
+      fetchAdditionalNews(1, false);
+      setCurrentPage(1);
+      setHasMore(true);
+    }, 5 * 60 * 1000);
 
-      // Auto-refresh every 5 minutes
-      const interval = setInterval(() => {
-        fetchAdditionalNews(1, false);
-        setCurrentPage(1);
-        setHasMore(true);
-      }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-      return () => clearInterval(interval);
-    }
-  }, [isConnected, subscribeToNews]);
 
-  useEffect(() => {
-    console.log('🔌 Connection status changed - isConnected:', isConnected);
-  }, [isConnected]);
 
   useEffect(() => {
     console.log(
@@ -78,11 +70,7 @@ const News: React.FC = () => {
     );
   }, [additionalNews]);
 
-  useEffect(() => {
-    if (news.length > 0) {
-      setLoading(false);
-    }
-  }, [news]);
+
 
   const fetchAdditionalNews = async (
     page: number = 1,
@@ -259,7 +247,7 @@ const News: React.FC = () => {
     }
   };
 
-  const allNews = [...news, ...additionalNews].slice(0, 20);
+  const allNews = additionalNews.slice(0, 20);
 
   if (loading) {
     return (

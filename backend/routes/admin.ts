@@ -6,7 +6,7 @@ import {
   BalanceAdjustmentRequest,
   WalletConfig,
   WalletAddressUpdate,
-  ApiResponse
+  ApiResponse,
 } from '../types';
 
 const router = express.Router();
@@ -62,14 +62,14 @@ router.get('/users', async (req, res) => {
       .limit(Number(limit));
 
     // Format users with balances for admin panel
-    const formattedUsers = users.map(user => ({
+    const formattedUsers = users.map((user) => ({
       id: user._id,
       name: user.name,
       email: user.email,
       role: user.role,
       isActive: user.isActive,
       createdAt: user.createdAt,
-      balances: user.balances || { BTC: 0, ETH: 0, TRC20: 0, USD: 0 }
+      balances: user.balances || { BTC: 0, ETH: 0, TRC20: 0, USD: 0 },
     }));
 
     const total = await User.countDocuments(filter);
@@ -146,7 +146,7 @@ router.get('/users/:userId/balances', async (req, res) => {
   try {
     const { userId } = req.params;
     const user = await User.findById(userId).select('balances email name');
-    
+
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -156,8 +156,8 @@ router.get('/users/:userId/balances', async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        balances: user.balances || { BTC: 0, ETH: 0, TRC20: 0, USD: 0 }
-      }
+        balances: user.balances || { BTC: 0, ETH: 0, TRC20: 0, USD: 0 },
+      },
     });
   } catch (error) {
     console.error('Get user balances error:', error);
@@ -169,22 +169,18 @@ router.get('/users/:userId/balances', async (req, res) => {
 router.post('/users/:userId/balance-adjustment', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { currency, amount, reason, type } = req.body;
-    
+    const { currency, amount, type } = req.body;
+
     if (!['BTC', 'ETH', 'TRC20', 'USD'].includes(currency)) {
       return res.status(400).json({ error: 'Invalid currency' });
     }
-    
+
     if (!['add', 'reduce'].includes(type)) {
       return res.status(400).json({ error: 'Invalid adjustment type' });
     }
-    
+
     if (!amount || amount <= 0) {
       return res.status(400).json({ error: 'Invalid amount' });
-    }
-    
-    if (!reason || reason.trim().length === 0) {
-      return res.status(400).json({ error: 'Reason is required' });
     }
 
     const user = await User.findById(userId);
@@ -202,7 +198,9 @@ router.post('/users/:userId/balance-adjustment', async (req, res) => {
     const newBalance = currentBalance + adjustmentAmount;
 
     if (newBalance < 0) {
-      return res.status(400).json({ error: 'Insufficient balance for reduction' });
+      return res
+        .status(400)
+        .json({ error: 'Insufficient balance for reduction' });
     }
 
     // Update user balance
@@ -217,8 +215,7 @@ router.post('/users/:userId/balance-adjustment', async (req, res) => {
       amount: adjustmentAmount,
       previousBalance: currentBalance,
       newBalance,
-      reason,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
     // For now, we'll just log to console. In production, save to database
@@ -230,15 +227,14 @@ router.post('/users/:userId/balance-adjustment', async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        balances: user.balances
+        balances: user.balances,
       },
       adjustment: {
         currency,
         amount: adjustmentAmount,
         previousBalance: currentBalance,
         newBalance,
-        reason
-      }
+      },
     });
   } catch (error) {
     console.error('Balance adjustment error:', error);
@@ -255,14 +251,14 @@ router.get('/wallet-config', async (req, res) => {
         BTC: '',
         ETH: '',
         TRC20: '',
-        BNB: ''
+        BNB: '',
       },
       qrCodes: config.qrCodes || {
         BTC: null,
         ETH: null,
         TRC20: null,
-        BNB: null
-      }
+        BNB: null,
+      },
     });
   } catch (error) {
     console.error('Wallet config fetch error:', error);
@@ -274,20 +270,20 @@ router.get('/wallet-config', async (req, res) => {
 router.put('/wallet-config/addresses', async (req, res) => {
   try {
     const { BTC, ETH, TRC20, BNB } = req.body;
-    
+
     const currentConfig = await AdminConfig.getConfig();
     const updatedConfig = await AdminConfig.updateConfig({
       depositAddresses: {
         BTC: BTC || currentConfig.depositAddresses?.BTC || '',
         ETH: ETH || currentConfig.depositAddresses?.ETH || '',
         TRC20: TRC20 || currentConfig.depositAddresses?.TRC20 || '',
-        BNB: BNB || currentConfig.depositAddresses?.BNB || ''
-      }
+        BNB: BNB || currentConfig.depositAddresses?.BNB || '',
+      },
     });
 
     res.json({
       message: 'Wallet addresses updated successfully',
-      depositAddresses: updatedConfig.depositAddresses
+      depositAddresses: updatedConfig.depositAddresses,
     });
   } catch (error) {
     console.error('Wallet addresses update error:', error);
@@ -299,32 +295,32 @@ router.put('/wallet-config/addresses', async (req, res) => {
 router.delete('/wallet-config/addresses/:currency', async (req, res) => {
   try {
     const { currency } = req.params;
-    
+
     if (!['BTC', 'ETH', 'TRC20', 'BNB'].includes(currency)) {
       return res.status(400).json({ error: 'Invalid currency' });
     }
 
     const config = await AdminConfig.getConfig();
-    
+
     // Use $unset to properly remove the fields
     const updateQuery = {
       $unset: {
         [`depositAddresses.${currency}`]: 1,
-        [`qrCodes.${currency}`]: 1
-      }
+        [`qrCodes.${currency}`]: 1,
+      },
     };
-    
+
     await AdminConfig.findByIdAndUpdate(config._id, updateQuery);
-    
+
     // Get updated config
     const updatedConfig = await AdminConfig.getConfig();
-    
-    res.json({ 
+
+    res.json({
       message: `${currency} wallet configuration deleted successfully`,
       config: {
         depositAddresses: updatedConfig.depositAddresses,
-        qrCodes: updatedConfig.qrCodes
-      }
+        qrCodes: updatedConfig.qrCodes,
+      },
     });
   } catch (error) {
     console.error('Error deleting wallet config:', error);
@@ -337,18 +333,20 @@ router.post('/wallet-config/qr-upload/:currency', async (req, res) => {
   try {
     const { currency } = req.params;
     const { qrCodeBase64 } = req.body;
-    
+
     if (!['BTC', 'ETH', 'TRC20', 'BNB'].includes(currency)) {
       return res.status(400).json({ error: 'Invalid currency' });
     }
-    
+
     if (!qrCodeBase64) {
       return res.status(400).json({ error: 'No QR code data provided' });
     }
 
     // Validate base64 format (should start with data:image/)
     if (!qrCodeBase64.startsWith('data:image/')) {
-      return res.status(400).json({ error: 'Invalid QR code format. Must be a base64 image.' });
+      return res
+        .status(400)
+        .json({ error: 'Invalid QR code format. Must be a base64 image.' });
     }
 
     // Update config with QR code base64 data
@@ -361,7 +359,7 @@ router.post('/wallet-config/qr-upload/:currency', async (req, res) => {
     res.json({
       message: 'QR code uploaded successfully',
       currency,
-      qrCodeData: qrCodes[currency]
+      qrCodeData: qrCodes[currency],
     });
   } catch (error) {
     console.error('QR code upload error:', error);
@@ -388,7 +386,7 @@ router.get('/withdrawal-requests', async (req, res) => {
         address: '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa',
         status: 'pending',
         requestedAt: new Date('2024-01-15T10:30:00Z'),
-        fee: 0.0005
+        fee: 0.0005,
       },
       {
         id: '2',
@@ -400,7 +398,7 @@ router.get('/withdrawal-requests', async (req, res) => {
         address: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b',
         status: 'pending',
         requestedAt: new Date('2024-01-15T11:45:00Z'),
-        fee: 0.01
+        fee: 0.01,
       },
       {
         id: '3',
@@ -412,15 +410,18 @@ router.get('/withdrawal-requests', async (req, res) => {
         address: 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE',
         status: 'pending',
         requestedAt: new Date('2024-01-15T12:15:00Z'),
-        fee: 1
-      }
+        fee: 1,
+      },
     ];
 
-    const filteredRequests = mockWithdrawals.filter(req => 
-      status === 'all' || req.status === status
+    const filteredRequests = mockWithdrawals.filter(
+      (req) => status === 'all' || req.status === status
     );
 
-    const paginatedRequests = filteredRequests.slice(skip, skip + Number(limit));
+    const paginatedRequests = filteredRequests.slice(
+      skip,
+      skip + Number(limit)
+    );
 
     res.json({
       withdrawalRequests: paginatedRequests,
@@ -428,8 +429,8 @@ router.get('/withdrawal-requests', async (req, res) => {
         page: Number(page),
         limit: Number(limit),
         total: filteredRequests.length,
-        pages: Math.ceil(filteredRequests.length / Number(limit))
-      }
+        pages: Math.ceil(filteredRequests.length / Number(limit)),
+      },
     });
   } catch (error) {
     console.error('Withdrawal requests fetch error:', error);
@@ -450,7 +451,9 @@ router.post('/withdrawal-requests/:requestId/approve', async (req, res) => {
     // 4. Update user balance
     // 5. Log the transaction
 
-    console.log(`Withdrawal request ${requestId} approved by admin ${req.user.id}`);
+    console.log(
+      `Withdrawal request ${requestId} approved by admin ${req.user.id}`
+    );
     console.log('Admin notes:', notes);
 
     res.json({
@@ -459,7 +462,7 @@ router.post('/withdrawal-requests/:requestId/approve', async (req, res) => {
       status: 'approved',
       approvedBy: req.user.id,
       approvedAt: new Date(),
-      notes
+      notes,
     });
   } catch (error) {
     console.error('Withdrawal approval error:', error);
@@ -484,7 +487,9 @@ router.post('/withdrawal-requests/:requestId/reject', async (req, res) => {
     // 4. Log the transaction
     // 5. Notify the user
 
-    console.log(`Withdrawal request ${requestId} rejected by admin ${req.user.id}`);
+    console.log(
+      `Withdrawal request ${requestId} rejected by admin ${req.user.id}`
+    );
     console.log('Rejection reason:', reason);
 
     res.json({
@@ -493,7 +498,7 @@ router.post('/withdrawal-requests/:requestId/reject', async (req, res) => {
       status: 'rejected',
       rejectedBy: req.user.id,
       rejectedAt: new Date(),
-      reason
+      reason,
     });
   } catch (error) {
     console.error('Withdrawal rejection error:', error);

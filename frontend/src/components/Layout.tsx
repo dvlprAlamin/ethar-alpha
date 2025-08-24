@@ -8,7 +8,7 @@ import {
   User,
   LogOut,
   History,
-  CreditCard,
+  // CreditCard,
   HelpCircle,
   FileText,
   Settings,
@@ -29,19 +29,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Assets', href: '/assets', icon: Wallet },
     { name: 'History', href: '/history', icon: History },
-    { name: 'Loan', href: '/loan', icon: CreditCard },
+    // { name: 'Loan', href: '/loan', icon: CreditCard },
     { name: 'Trade', href: '/trade', icon: TrendingUp },
     { name: 'Support', href: '/support', icon: HelpCircle },
     { name: 'White paper', href: '/whitepaper', icon: FileText },
   ];
 
-  const adminNavigation = [
-    { name: 'Admin', href: '/admin', icon: Settings },
-  ];
+  const adminNavigation = [{ name: 'Admin', href: '/admin', icon: Settings }];
 
-  const navigation = user?.role === 'admin' 
-    ? [...baseNavigation, ...adminNavigation]
-    : baseNavigation;
+  const navigation =
+    user?.role === 'admin'
+      ? [...baseNavigation, ...adminNavigation]
+      : baseNavigation;
 
   const handleLogout = () => {
     logout();

@@ -33,13 +33,24 @@ router.get('/market-data', async (req, res) => {
     switch (dataType) {
       case 'crypto':
         try {
+          // Check if cache should be cleared
+          const { clearCache } = req.query;
+          if (clearCache === 'true') {
+            cryptoService.clearCache();
+            logger.info('Crypto cache cleared by request');
+          }
+          
           // Fetch crypto data directly from CoinGecko
           const cryptoData = await cryptoService.getCryptoPrices();
+          
+          logger.info(`Fetched ${cryptoData.length} cryptocurrency records`);
+          
           data = {
             type: 'crypto',
             data: cryptoData,
             source: 'CoinGecko API',
             timestamp: new Date().toISOString(),
+            count: cryptoData.length,
           };
         } catch (error) {
           logger.error('Error fetching crypto data:', error);
@@ -47,6 +58,7 @@ router.get('/market-data', async (req, res) => {
             success: false,
             data: [],
             error: 'Failed to fetch cryptocurrency data',
+            details: error instanceof Error ? error.message : 'Unknown error'
           });
         }
         break;

@@ -133,11 +133,18 @@ router.get('/all', authenticate, async (req, res) => {
       .limit(limit)
       .lean();
 
+    // Transform trades to include userEmail and userName fields
+    const transformedTrades = trades.map(trade => ({
+      ...trade,
+      userName: trade.userId?.name || 'Unknown User',
+      userEmail: trade.userId?.email || 'No email'
+    }));
+
     const totalTrades = await Trade.countDocuments(query);
     const totalPages = Math.ceil(totalTrades / limit);
 
     res.json({
-      trades,
+      trades: transformedTrades,
       pagination: {
         currentPage: page,
         totalPages,

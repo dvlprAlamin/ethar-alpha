@@ -1,41 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Bell,
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react';
+import { Bell, TrendingUp, ArrowUpRight, TrendingDown } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import axios from 'axios';
-
-interface Transaction {
-  id: string;
-  type: 'buy' | 'sell';
-  pair: string;
-  amount: string;
-  price: string;
-  date: string;
-  time: string;
-  status: 'completed' | 'pending' | 'failed';
-}
 
 interface Trade {
   _id: string;
   amount: number;
   status: 'active' | 'completed';
-  profitLoss: number;
+  profitLoss: string;
   returnPercentage: number;
   finalAmount: number;
   createdAt: string;
   updatedAt: string;
+  userId: string;
 }
-
-
 
 interface WithdrawalTransaction {
   _id: string;
@@ -51,9 +29,7 @@ interface WithdrawalTransaction {
 }
 
 const History: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'trade' | 'withdraw'>(
-    'trade'
-  );
+  const [activeTab, setActiveTab] = useState<'trade' | 'withdraw'>('trade');
   const [withdrawalHistory, setWithdrawalHistory] = useState<
     WithdrawalTransaction[]
   >([]);
@@ -79,9 +55,7 @@ const History: React.FC = () => {
       );
       setTradeHistory(response.data.trades || []);
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || 'Failed to fetch trade history'
-      );
+      setError(err.response?.data?.message || 'Failed to fetch trade history');
     } finally {
       setLoading(false);
     }
@@ -119,8 +93,6 @@ const History: React.FC = () => {
       fetchTradeHistory();
     }
   }, [activeTab, user, token]);
-
-
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -227,7 +199,8 @@ const History: React.FC = () => {
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
             <p className="text-slate-400 mt-2">
-              Loading {activeTab === 'withdraw' ? 'withdrawal' : activeTab} history...
+              Loading {activeTab === 'withdraw' ? 'withdrawal' : activeTab}{' '}
+              history...
             </p>
           </div>
         )}
@@ -244,15 +217,19 @@ const History: React.FC = () => {
                     <div className="flex items-center space-x-3">
                       <div
                         className={`flex items-center space-x-1 px-2 py-1 rounded-md text-xs font-medium ${
-                          trade.profitLoss >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                          trade.profitLoss === 'loss'
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-green-500/20 text-green-400'
                         }`}
                       >
-                        {trade.profitLoss >= 0 ? (
-                          <TrendingUp className="w-3 h-3" />
+                        {trade.profitLoss === 'loss' ? (
+                          <TrendingDown className="w-3 h-3" />
                         ) : (
-                          <ArrowUpRight className="w-3 h-3" />
+                          <TrendingUp className="w-3 h-3" />
                         )}
-                        <span>{trade.profitLoss >= 0 ? 'Profit' : 'Loss'}</span>
+                        <span>
+                          {trade.profitLoss === 'loss' ? 'Loss' : 'Profit'}
+                        </span>
                       </div>
                       <div
                         className={`px-2 py-1 rounded-md text-xs font-medium border ${getStatusColor(
@@ -277,10 +254,15 @@ const History: React.FC = () => {
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-slate-400 mb-1">Return (%):</p>
-                      <p className={`font-medium ${
-                        trade.returnPercentage >= 0 ? 'text-green-400' : 'text-red-400'
-                      }`}>
-                        {trade.returnPercentage > 0 ? '+' : ''}{trade.returnPercentage}%
+                      <p
+                        className={`font-medium ${
+                          trade.profitLoss === 'loss'
+                            ? 'text-red-400'
+                            : 'text-green-400'
+                        }`}
+                      >
+                        {trade.profitLoss === 'loss' ? '-' : '+'}
+                        {trade.returnPercentage}%
                       </p>
                     </div>
                     <div>
@@ -298,7 +280,6 @@ const History: React.FC = () => {
                   </div>
                 </div>
               ))
-
             : activeTab === 'withdraw'
             ? withdrawalHistory.map((withdrawal) => (
                 <div

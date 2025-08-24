@@ -137,14 +137,6 @@ const Admin: React.FC = () => {
 
   // Debug authentication state
   useEffect(() => {
-    console.log('Admin component - Auth state:', {
-      user,
-      token,
-      isAuthenticated,
-      userRole: user?.role,
-      isAdmin: user?.role === 'admin',
-    });
-
     // Set auth loading to false after checking
     setAuthLoading(false);
   }, [user, token, isAuthenticated]);
@@ -849,9 +841,8 @@ const Admin: React.FC = () => {
 
                   try {
                     setLoading(true);
-                    const token = localStorage.getItem('token');
                     const response = await fetch(
-                      `${import.meta.env.VITE_SERVER_URL}/api/trades/${
+                      `${import.meta.env.VITE_API_URL}/trades/${
                         selectedTrade._id
                       }/result`,
                       {

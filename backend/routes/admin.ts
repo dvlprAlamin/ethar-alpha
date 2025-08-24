@@ -244,6 +244,64 @@ router.post('/users/:userId/balance-adjustment', async (req, res) => {
   }
 });
 
+// Delete user
+router.delete('/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Validate userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: 'Invalid user ID format' });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent deletion of admin users
+    if (user.role === 'admin') {
+      return res.status(403).json({ error: 'Cannot delete admin users' });
+    }
+
+    // Check if user has active trades or pending withdrawals
+    const pendingWithdrawals = await Withdrawal.countDocuments({
+      userId: userId,
+      status: 'pending'
+    });
+
+    if (pendingWithdrawals > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete user with pending withdrawals. Please process all withdrawals first.' 
+      });
+    }
+
+    // Delete the user
+    await User.findByIdAndDelete(userId);
+
+    // Log the deletion
+    console.log(`User deleted by admin:`, {
+      deletedUserId: userId,
+      deletedUserEmail: user.email,
+      deletedUserName: user.name,
+      adminId: req.user.id,
+      timestamp: new Date()
+    });
+
+    res.json({
+      message: 'User deleted successfully',
+      deletedUser: {
+        id: user._id,
+        email: user.email,
+        name: user.name
+      }
+    });
+  } catch (error) {
+    console.error('User deletion error:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 // Get wallet configuration
 router.get('/wallet-config', async (req, res) => {
   try {

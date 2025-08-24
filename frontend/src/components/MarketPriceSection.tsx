@@ -6,9 +6,9 @@ interface CryptoData {
   id: string;
   symbol: string;
   name: string;
-  current_price: number;
-  price_change_percentage_24h: number;
-  market_cap: number;
+  current_price?: number;
+  price_change_percentage_24h?: number;
+  market_cap?: number;
   image: string;
 }
 
@@ -23,9 +23,9 @@ interface NFTData {
 interface StockData {
   symbol: string;
   name: string;
-  price: number;
-  change: number;
-  changePercent: number;
+  price?: number;
+  change?: number;
+  changePercent?: number;
 }
 
 type TabType = 'crypto' | 'nft' | 'stocks';
@@ -161,29 +161,31 @@ const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  const formatPrice = (price: number, currency = 'USD') => {
+  const formatPrice = (price: number | undefined | null, currency = 'USD') => {
+    const safePrice = price ?? 0;
     if (currency === 'ETH') {
-      return `${price.toFixed(2)} ETH`;
+      return `${safePrice.toFixed(2)} ETH`;
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(price);
+    }).format(safePrice);
   };
 
-  const formatLargeNumber = (num: number) => {
-    if (num >= 1e9) {
-      return `$${(num / 1e9).toFixed(1)}B`;
+  const formatLargeNumber = (num: number | undefined | null) => {
+    const safeNum = num ?? 0;
+    if (safeNum >= 1e9) {
+      return `$${(safeNum / 1e9).toFixed(1)}B`;
     }
-    if (num >= 1e6) {
-      return `$${(num / 1e6).toFixed(1)}M`;
+    if (safeNum >= 1e6) {
+      return `$${(safeNum / 1e6).toFixed(1)}M`;
     }
-    if (num >= 1e3) {
-      return `$${(num / 1e3).toFixed(1)}K`;
+    if (safeNum >= 1e3) {
+      return `$${(safeNum / 1e3).toFixed(1)}K`;
     }
-    return `$${num.toFixed(0)}`;
+    return `$${safeNum.toFixed(0)}`;
   };
 
   // const filteredCryptoData = cryptoData.filter(
@@ -290,30 +292,30 @@ const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-lg font-bold text-white">
-                              {formatPrice(crypto.current_price)}
+                              {formatPrice(crypto.current_price ?? 0)}
                             </span>
                             <div
                               className={`flex items-center space-x-1 ${
-                                crypto.price_change_percentage_24h >= 0
+                                (crypto.price_change_percentage_24h ?? 0) >= 0
                                   ? 'text-green-600'
                                   : 'text-red-600'
                               }`}
                             >
-                              {crypto.price_change_percentage_24h >= 0 ? (
+                              {(crypto.price_change_percentage_24h ?? 0) >= 0 ? (
                                 <TrendingUp className="w-4 h-4" />
                               ) : (
                                 <TrendingDown className="w-4 h-4" />
                               )}
                               <span className="text-sm font-medium">
-                                {crypto.price_change_percentage_24h >= 0
+                                {(crypto.price_change_percentage_24h ?? 0) >= 0
                                   ? '+'
                                   : ''}
-                                {crypto.price_change_percentage_24h.toFixed(2)}%
+                                {crypto.price_change_percentage_24h != null ? crypto.price_change_percentage_24h.toFixed(2) : '0.00'}%
                               </span>
                             </div>
                           </div>
                           <div className="text-xs text-slate-400">
-                            Market Cap: {formatLargeNumber(crypto.market_cap)}
+                            Market Cap: {formatLargeNumber(crypto.market_cap ?? 0)}
                           </div>
                         </div>
                       </div>
@@ -400,28 +402,28 @@ const MarketPriceSection: React.FC<{ isDashboard?: boolean }> = ({
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <span className="text-lg font-bold text-white">
-                              {formatPrice(stock.price)}
+                              {formatPrice(stock.price ?? 0)}
                             </span>
                             <div
                               className={`flex items-center space-x-1 ${
-                                stock.changePercent >= 0
+                                (stock.changePercent ?? 0) >= 0
                                   ? 'text-green-600'
                                   : 'text-red-600'
                               }`}
                             >
-                              {stock.changePercent >= 0 ? (
+                              {(stock.changePercent ?? 0) >= 0 ? (
                                 <TrendingUp className="w-4 h-4" />
                               ) : (
                                 <TrendingDown className="w-4 h-4" />
                               )}
                               <span className="text-sm font-medium">
-                                {stock.changePercent >= 0 ? '+' : ''}
-                                {stock.changePercent.toFixed(2)}%
+                                {(stock.changePercent ?? 0) >= 0 ? '+' : ''}
+                                {stock.changePercent != null ? stock.changePercent.toFixed(2) : '0.00'}%
                               </span>
                             </div>
                           </div>
                           <div className="text-xs text-slate-400">
-                            Change: {formatPrice(stock.change)}
+                            Change: {formatPrice(stock.change ?? 0)}
                           </div>
                         </div>
                       </div>

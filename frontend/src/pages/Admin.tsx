@@ -21,7 +21,7 @@ import {
 import { motion } from 'framer-motion';
 
 interface User {
-  _id: string;
+  id: string;
   email: string;
   name: string;
   balances: {
@@ -135,6 +135,10 @@ const Admin: React.FC = () => {
     status: 'completed' as 'active' | 'completed',
   });
 
+  // User Deletion State
+  const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
   // Debug authentication state
   useEffect(() => {
     // Set auth loading to false after checking
@@ -147,7 +151,10 @@ const Admin: React.FC = () => {
       setError(null);
 
       if (!token) {
-        setError('Authentication token not found. Please log in again.');
+        const errorMessage =
+          'Authentication token not found. Please log in again.';
+        setError(errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
@@ -161,12 +168,16 @@ const Admin: React.FC = () => {
       );
 
       if (response.status === 401) {
-        setError('Authentication failed. Please log in again.');
+        const errorMessage = 'Authentication failed. Please log in again.';
+        setError(errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
       if (response.status === 403) {
-        setError('Access denied. Admin privileges required.');
+        const errorMessage = 'Access denied. Admin privileges required.';
+        setError(errorMessage);
+        toast.error(errorMessage);
         return;
       }
 
@@ -363,7 +374,7 @@ const Admin: React.FC = () => {
 
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/admin/users/${
-          selectedUser._id
+          selectedUser.id
         }/balance-adjustment`,
         {
           method: 'POST',
@@ -390,6 +401,7 @@ const Admin: React.FC = () => {
       }
 
       if (response.ok) {
+        await response.json();
         await loadUsers();
         setShowBalanceModal(false);
         setBalanceForm({
@@ -398,12 +410,84 @@ const Admin: React.FC = () => {
           amount: '',
         });
         setSelectedUser(null);
+        toast.success(
+          `Balance ${
+            balanceForm.type === 'add' ? 'increased' : 'decreased'
+          } successfully for ${selectedUser.name || selectedUser.email}`
+        );
       } else {
-        setError('Failed to adjust balance. Please try again.');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error || 'Failed to adjust balance. Please try again.';
+        setError(errorMessage);
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Failed to adjust balance:', error);
-      setError('Network error. Please check your connection and try again.');
+      const errorMessage =
+        'Network error. Please check your connection and try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUserDelete = async () => {
+    if (!userToDelete) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/admin/users/${userToDelete.id}`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.status === 401) {
+        setError('Authentication failed. Please log in again.');
+        toast.error('Authentication failed. Please log in again.');
+        return;
+      }
+
+      if (response.status === 403) {
+        setError('Access denied. Admin privileges required.');
+        toast.error('Access denied. Admin privileges required.');
+        return;
+      }
+
+      if (response.ok) {
+        await response.json();
+        await loadUsers();
+        setShowDeleteUserModal(false);
+        setUserToDelete(null);
+        toast.success(
+          `User ${userToDelete.name || userToDelete.email} deleted successfully`
+        );
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorData.error || 'Failed to delete user. Please try again.';
+        setError(errorMessage);
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      const errorMessage =
+        'Network error. Please check your connection and try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -767,7 +851,7 @@ const Admin: React.FC = () => {
         )}
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-3 mb-8">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:space-x-3 sm:gap-0 mb-8">
           {[
             { id: 'balance', label: 'User Balance', icon: DollarSign },
             { id: 'withdrawals', label: 'Withdrawals', icon: Minus },
@@ -785,13 +869,13 @@ const Admin: React.FC = () => {
                     tab.id as 'balance' | 'withdrawals' | 'wallet' | 'trades'
                   )
                 }
-                className={`flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors relative ${
+                className={`flex items-center justify-center sm:space-x-2 px-4 py-3 rounded-lg font-medium transition-colors relative text-center ${
                   activeTab === tab.id
                     ? 'bg-blue-600 text-white'
                     : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-5 h-5 hidden sm:block" />
                 <span>{tab.label}</span>
                 {pendingCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center min-w-[1.5rem]">
@@ -998,8 +1082,9 @@ const Admin: React.FC = () => {
               </div>
 
               {/* Table */}
-              <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-                <table className="w-full">
+
+              <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-x-auto">
+                <table className="w-full min-w-[700px]">
                   <thead className="bg-slate-750">
                     <tr className="border-b border-slate-700">
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
@@ -1191,7 +1276,7 @@ const Admin: React.FC = () => {
                   <tbody>
                     {filteredUsers.map((user) => (
                       <tr
-                        key={user._id}
+                        key={user.id}
                         className="border-b border-slate-800 hover:bg-slate-800/50"
                       >
                         <td className="py-3 px-4">
@@ -1209,15 +1294,27 @@ const Admin: React.FC = () => {
                           ${user.balances.USD.toFixed(2)}
                         </td>
                         <td className="py-3 px-4">
-                          <button
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setShowBalanceModal(true);
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                          >
-                            Adjust Balance
-                          </button>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => {
+                                setSelectedUser(user);
+                                setShowBalanceModal(true);
+                              }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Adjust Balance
+                            </button>
+                            <button
+                              onClick={() => {
+                                setUserToDelete(user);
+                                setShowDeleteUserModal(true);
+                              }}
+                              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center space-x-1"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1240,11 +1337,11 @@ const Admin: React.FC = () => {
                 Pending Withdrawal Requests
               </h2>
 
-              <div className="space-y-4">
+              <div className="space-y-4 overflow-auto">
                 {pendingWithdrawals.map((request) => (
                   <div
                     key={request.id}
-                    className="bg-slate-800 rounded-lg p-4 border border-slate-700"
+                    className="bg-slate-800 rounded-lg p-4 border border-slate-700 min-w-fit"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
@@ -1325,100 +1422,102 @@ const Admin: React.FC = () => {
               </div>
 
               {/* Table */}
-              <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-slate-750">
-                    <tr className="border-b border-slate-700">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                        Network
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                        Wallet Address
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                        QR Code
-                      </th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {depositAddresses.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="py-8 text-center text-slate-400"
-                        >
-                          No deposit addresses configured. Click "Add New
-                          Deposit Address" to get started.
-                        </td>
+              <div className="overflow-x-auto">
+                <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+                  <table className="w-full min-w-[600px]">
+                    <thead className="bg-slate-750">
+                      <tr className="border-b border-slate-700">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                          Network
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                          Wallet Address
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                          QR Code
+                        </th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-slate-300">
+                          Actions
+                        </th>
                       </tr>
-                    ) : (
-                      depositAddresses.map((address) => (
-                        <tr
-                          key={address._id}
-                          className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
-                        >
-                          {/* Network */}
-                          <td className="py-4 px-4">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-white text-sm font-medium">
-                                {address.network}
-                              </span>
-                            </div>
-                          </td>
-
-                          {/* Wallet Address */}
-                          <td className="py-4 px-4">
-                            <span className="text-white text-sm font-mono break-all">
-                              {address.address}
-                            </span>
-                          </td>
-
-                          {/* QR Code */}
-                          <td className="py-4 px-4">
-                            <div className="flex items-center space-x-2">
-                              {address.qrCodeUrl ? (
-                                <img
-                                  src={`${
-                                    import.meta.env.VITE_SERVER_URL
-                                  }/qr-codes/${address.qrCodeUrl}`}
-                                  alt={`${address.network} QR Code`}
-                                  className="w-10 h-10 object-cover rounded border border-slate-600"
-                                />
-                              ) : (
-                                <div className="w-10 h-10 bg-slate-700 border border-slate-600 rounded flex items-center justify-center">
-                                  <Upload className="w-4 h-4 text-slate-400" />
-                                </div>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Actions */}
-                          <td className="py-4 px-4">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => handleEditAddress(address)}
-                                className="p-2 hover:bg-slate-600 rounded transition-colors group"
-                                title="Edit address"
-                              >
-                                <Edit2 className="w-4 h-4 text-slate-400 group-hover:text-white" />
-                              </button>
-                              <button
-                                onClick={() => confirmDelete(address._id)}
-                                className="p-2 hover:bg-red-600 rounded transition-colors group"
-                                title="Delete address"
-                              >
-                                <Trash2 className="w-4 h-4 text-red-400 group-hover:text-white" />
-                              </button>
-                            </div>
+                    </thead>
+                    <tbody>
+                      {depositAddresses.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="py-8 text-center text-slate-400"
+                          >
+                            No deposit addresses configured. Click "Add New
+                            Deposit Address" to get started.
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        depositAddresses.map((address) => (
+                          <tr
+                            key={address._id}
+                            className="border-b border-slate-700 hover:bg-slate-750 transition-colors"
+                          >
+                            {/* Network */}
+                            <td className="py-4 px-4">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-white text-sm font-medium">
+                                  {address.network}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Wallet Address */}
+                            <td className="py-4 px-4">
+                              <span className="text-white text-sm font-mono break-all">
+                                {address.address}
+                              </span>
+                            </td>
+
+                            {/* QR Code */}
+                            <td className="py-4 px-4">
+                              <div className="flex items-center space-x-2">
+                                {address.qrCodeUrl ? (
+                                  <img
+                                    src={`${
+                                      import.meta.env.VITE_SERVER_URL
+                                    }/qr-codes/${address.qrCodeUrl}`}
+                                    alt={`${address.network} QR Code`}
+                                    className="w-10 h-10 object-cover rounded border border-slate-600"
+                                  />
+                                ) : (
+                                  <div className="w-10 h-10 bg-slate-700 border border-slate-600 rounded flex items-center justify-center">
+                                    <Upload className="w-4 h-4 text-slate-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-4 px-4">
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => handleEditAddress(address)}
+                                  className="p-2 hover:bg-slate-600 rounded transition-colors group"
+                                  title="Edit address"
+                                >
+                                  <Edit2 className="w-4 h-4 text-slate-400 group-hover:text-white" />
+                                </button>
+                                <button
+                                  onClick={() => confirmDelete(address._id)}
+                                  className="p-2 hover:bg-red-600 rounded transition-colors group"
+                                  title="Delete address"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-400 group-hover:text-white" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </Card>
 
@@ -1717,6 +1816,72 @@ const Admin: React.FC = () => {
                   className="px-6 bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-medium transition-colors"
                 >
                   Cancel
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Delete User Confirmation Modal */}
+        {showDeleteUserModal && userToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-slate-800 rounded-lg p-6 w-full max-w-md mx-4"
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-red-100 rounded-full">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-white">
+                  Delete User
+                </h3>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-slate-300 mb-4">
+                  Are you sure you want to delete this user? This action cannot
+                  be undone.
+                </p>
+
+                <div className="bg-slate-700 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Name:</span>
+                    <span className="text-white">
+                      {userToDelete.name || 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Email:</span>
+                    <span className="text-white">{userToDelete.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Balance:</span>
+                    <span className="text-white">
+                      ${userToDelete.balances?.USD?.toFixed(2) || '0.00'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteUserModal(false);
+                    setUserToDelete(null);
+                  }}
+                  className="flex-1 bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUserDelete}
+                  disabled={loading}
+                  className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-slate-600 text-white py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{loading ? 'Deleting...' : 'Delete User'}</span>
                 </button>
               </div>
             </motion.div>

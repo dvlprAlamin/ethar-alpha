@@ -17,16 +17,13 @@ interface CoinGeckoPrice {
 }
 
 interface CryptoPrice {
+  id: string;
   symbol: string;
   name: string;
-  price: number;
-  change24h: number;
-  change7d: number;
-  marketCap: number;
-  volume: number;
-  high24h: number;
-  low24h: number;
-  lastUpdated: string;
+  current_price: number;
+  price_change_percentage_24h: number;
+  market_cap: number;
+  image: string;
 }
 
 class CryptoService {
@@ -104,16 +101,13 @@ class CryptoService {
           return hasData;
         })
         .map(symbol => ({
+          id: symbol,
           symbol: symbol.toUpperCase(),
           name: symbol.charAt(0).toUpperCase() + symbol.slice(1),
-          price: prices[symbol].usd || 0,
-          change24h: prices[symbol].usd_24h_change || 0,
-          change7d: 0,
-          marketCap: prices[symbol].usd_market_cap || 0,
-          volume: prices[symbol].usd_24h_vol || 0,
-          high24h: 0,
-          low24h: 0,
-          lastUpdated: new Date().toISOString()
+          current_price: prices[symbol].usd || 0,
+          price_change_percentage_24h: prices[symbol].usd_24h_change || 0,
+          market_cap: prices[symbol].usd_market_cap || 0,
+          image: `https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=${encodeURIComponent(symbol + ' cryptocurrency logo')}&image_size=square`
         }));
 
       if (transformedData.length === 0) {
@@ -155,40 +149,31 @@ class CryptoService {
       // Return fallback data on error
       const fallbackData: CryptoPrice[] = [
         {
+          id: 'bitcoin',
           symbol: 'BTC',
           name: 'Bitcoin',
-          price: 45000,
-          change24h: 2.5,
-          change7d: 0,
-          marketCap: 850000000000,
-          volume: 25000000000,
-          high24h: 0,
-          low24h: 0,
-          lastUpdated: new Date().toISOString(),
+          current_price: 45000,
+          price_change_percentage_24h: 2.5,
+          market_cap: 850000000000,
+          image: 'https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=bitcoin%20cryptocurrency%20logo&image_size=square',
         },
         {
+          id: 'ethereum',
           symbol: 'ETH',
           name: 'Ethereum',
-          price: 3200,
-          change24h: -1.2,
-          change7d: 0,
-          marketCap: 380000000000,
-          volume: 15000000000,
-          high24h: 0,
-          low24h: 0,
-          lastUpdated: new Date().toISOString(),
+          current_price: 3200,
+          price_change_percentage_24h: -1.2,
+          market_cap: 380000000000,
+          image: 'https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=ethereum%20cryptocurrency%20logo&image_size=square',
         },
         {
+          id: 'tron',
           symbol: 'TRX',
           name: 'Tron',
-          price: 0.12,
-          change24h: 0.8,
-          change7d: 0,
-          marketCap: 10000000000,
-          volume: 800000000,
-          high24h: 0,
-          low24h: 0,
-          lastUpdated: new Date().toISOString(),
+          current_price: 0.12,
+          price_change_percentage_24h: 0.8,
+          market_cap: 10000000000,
+          image: 'https://trae-api-sg.mchost.guru/api/ide/v1/text_to_image?prompt=tron%20cryptocurrency%20logo&image_size=square',
         },
       ];
 

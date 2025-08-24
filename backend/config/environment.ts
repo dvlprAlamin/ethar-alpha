@@ -69,7 +69,7 @@ export function getEnvironmentConfig(): EnvironmentConfig {
     CLIENT_URL:
       process.env.CLIENT_URL ||
       process.env.RAILWAY_STATIC_URL ||
-      'http://localhost:5173',
+      'https://ethar-alpha.vercel.app',
     SERVER_URL:
       process.env.SERVER_URL || process.env.RAILWAY_PUBLIC_DOMAIN
         ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
